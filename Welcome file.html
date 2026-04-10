@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepBlue — Project Specification</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html">
+
+    <h1 id="project-specification-deepblue-sentinel-edition">Project Specification: DeepBlue (Sentinel Edition)</h1>
+
+    <p><strong>Hackathon Theme:</strong> Water</p>
+    <p><strong>Track:</strong> Best Use of MongoDB</p>
+    <p><strong>Timeframe:</strong> 20 Hours</p>
+    <p><strong>Lead Developers:</strong> [Your Team Name]</p>
+
+    <hr>
+
+    <h2 id="user-story">1. The Problem &amp; User Story</h2>
+
+    <p>Sarah walks her golden retriever along Prospect Park lake every morning. Last summer, a toxic algal bloom went undetected for days — her dog got sick after drinking from the shore. Official water quality reports exist, but they're buried in government portals, updated infrequently, and impossible to act on.</p>
+
+    <p><strong>DeepBlue</strong> is a community-driven water safety platform that fuses official sensor data (USGS) with real-time crowdsourced reports to produce a live <strong>Safety Forecast</strong> for local water bodies. Users open an interactive map, see color-coded safety markers, tap into any water body for an AI-generated advisory ("Safe for swimming, avoid pet contact near south shore"), and submit their own geo-tagged photo reports from the field.</p>
+
+    <hr>
+
+    <h2 id="technical-stack">2. Technical Stack</h2>
+
+    <table>
+      <thead>
+        <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Backend</td><td><strong>Go (Golang)</strong></td><td>High-concurrency API server, data ingestion, safety scoring</td></tr>
+        <tr><td>Frontend</td><td><strong>HTMX + Leaflet.js</strong></td><td>Server-rendered panels (HTMX) + interactive geospatial map (Leaflet)</td></tr>
+        <tr><td>Database</td><td><strong>MongoDB Atlas</strong></td><td>Geospatial indexing, Vector Search, Change Streams, Aggregation Pipelines</td></tr>
+        <tr><td>AI</td><td><strong>AWS Bedrock (Claude 3.5 Sonnet)</strong></td><td>Multimodal image analysis + RAG-based safety advisory generation</td></tr>
+        <tr><td>Storage</td><td><strong>AWS S3</strong></td><td>Community-uploaded image storage</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <p><strong>Key scope decision:</strong> We cut AWS Rekognition entirely. Bedrock's multimodal capabilities handle both image analysis <em>and</em> RAG reasoning in a single service, eliminating an entire AWS integration surface and saving ~2 hours of config/debugging.</p>
+    </blockquote>
+
+    <hr>
+
+    <h2 id="system-architecture">3. System Architecture &amp; Features</h2>
+
+    <h3 id="data-ingestion">3.1 Data Ingestion Pipeline</h3>
+    <ol>
+      <li>
+        <p><strong>Official Stream:</strong> A scheduled Go routine fetches JSON payloads from the <strong>USGS Water Data API</strong> on a 15-minute interval. Parsed metrics (pH, temperature, turbidity) are upserted into the <code>water_entities</code> collection.</p>
+      </li>
+      <li>
+        <p><strong>Community Stream:</strong> Users upload geo-tagged photos via the frontend. Images are stored in <strong>AWS S3</strong>. A document is inserted into the <code>community_reports</code> collection with the S3 URL and location.</p>
+      </li>
+    </ol>
+
+    <h3 id="change-stream-pipeline">3.2 Change Stream Pipeline (MongoDB)</h3>
+    <p>A MongoDB <strong>Change Stream</strong> watches the <code>community_reports</code> collection for new inserts. On each new report:</p>
+    <ol>
+      <li>The Go backend sends the image to <strong>Bedrock (Claude 3.5 Sonnet)</strong> as a multimodal prompt: <em>"Analyze this water body photo. Identify any visual indicators of algal blooms, discoloration, foam, debris, or pollution. Return a risk label and confidence score."</em></li>
+      <li>The returned risk labels are written back to the report document.</li>
+      <li>The parent <code>water_entity</code> safety score is recalculated.</li>
+    </ol>
+    <p>This demonstrates <strong>event-driven architecture</strong> with MongoDB as the reactive backbone — a strong signal for the MongoDB track.</p>
+
+    <h3 id="rag-layer">3.3 The AI Reasoning Layer (RAG)</h3>
+    <p>When a user taps on a water body for its advisory:</p>
+    <ul>
+      <li><strong>Retrieval:</strong> MongoDB <strong>Atlas Vector Search</strong> queries a <code>knowledge_chunks</code> collection — pre-embedded excerpts from EPA/WHO water safety guidelines.</li>
+      <li><strong>Augmentation:</strong> The retrieved chunks are combined with the entity's live sensor data and recent community risk labels.</li>
+      <li><strong>Generation:</strong> <strong>Bedrock (Claude 3.5 Sonnet)</strong> synthesizes everything into a human-readable safety advisory.</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="database-schema">4. Database Schema (MongoDB Atlas)</h2>
+
+    <p>Three purpose-built collections, each leveraging different MongoDB capabilities:</p>
+
+    <h3>Collection: <code>water_entities</code></h3>
+    <p><em>Indexes: <code>2dsphere</code> on <code>location</code></em></p>
+    <pre><code>{
+  "_id": ObjectId,
+  "name": "Prospect Park Lake",
+  "location": { "type": "Point", "coordinates": [-73.969, 40.660] },
+  "official_metrics": {
+    "ph": 7.2,
+    "temp_c": 22.1,
+    "turbidity_ntu": 4.5,
+    "last_updated": ISODate
+  },
+  "safety_score": 0.72,
+  "safety_label": "moderate",
+  "report_count": 14,
+  "last_report_at": ISODate
+}
+</code></pre>
+
+    <h3>Collection: <code>community_reports</code></h3>
+    <p><em>Indexes: <code>2dsphere</code> on <code>location</code>, compound on <code>entity_id + created_at</code></em></p>
+    <pre><code>{
+  "_id": ObjectId,
+  "entity_id": ObjectId,
+  "location": { "type": "Point", "coordinates": [-73.968, 40.661] },
+  "img_url": "s3://deepblue-uploads/abc123.jpg",
+  "ai_risk_labels": ["algae_bloom", "discoloration"],
+  "ai_confidence": 0.87,
+  "ai_analyzed": true,
+  "user_note": "Green scum along south bank",
+  "created_at": ISODate
+}
+</code></pre>
+
+    <h3>Collection: <code>knowledge_chunks</code></h3>
+    <p><em>Indexes: Atlas Vector Search index on <code>embedding</code></em></p>
+    <pre><code>{
+  "_id": ObjectId,
+  "source": "EPA Recreational Water Quality Criteria 2024",
+  "section": "Cyanobacteria Advisory Thresholds",
+  "content": "When cell counts exceed 100,000 cells/mL...",
+  "embedding": [0.012, -0.034, ...],  // 1536-dim vector
+  "created_at": ISODate
+}
+</code></pre>
+
+    <blockquote>
+      <p><strong>Why three collections?</strong> This avoids the unbounded embedded-array anti-pattern, enables independent indexing strategies, and lets us demonstrate MongoDB <strong>Aggregation Pipelines with <code>$lookup</code></strong> to join entities with their reports — a much stronger showing for the MongoDB track.</p>
+    </blockquote>
+
+    <hr>
+
+    <h2 id="algorithmic-logic">5. Safety Index Algorithm</h2>
+
+    <p>The <strong>Safety Index (S)</strong> is computed by the Go backend whenever sensor data or community reports change. It determines the marker color on the map:</p>
+
+    <pre><code>S = (W_ph × ΔpH) + (W_turb × T_norm) + (W_vis × V_avg)
+    ─────────────────────────────────────────────────────
+                             3
+</code></pre>
+
+    <p><em>Where:</em></p>
+    <ul>
+      <li><strong>ΔpH:</strong> Absolute deviation from neutral (7.0), normalized to 0–1.</li>
+      <li><strong>T_norm:</strong> Turbidity in NTU, normalized against EPA thresholds (0–1).</li>
+      <li><strong>V_avg:</strong> Average visual risk confidence from the last 5 community reports (0–1).</li>
+      <li><strong>W:</strong> Weighting factors — default <code>W_ph=0.3, W_turb=0.3, W_vis=0.4</code> (community signal weighted highest to reward engagement).</li>
+    </ul>
+
+    <table>
+      <thead>
+        <tr><th>Score Range</th><th>Label</th><th>Map Color</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0.0 – 0.3</td><td>Safe</td><td>🟢 Green</td></tr>
+        <tr><td>0.3 – 0.6</td><td>Moderate</td><td>🟡 Yellow</td></tr>
+        <tr><td>0.6 – 1.0</td><td>Dangerous</td><td>🔴 Red</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2 id="frontend-architecture">6. Frontend Architecture</h2>
+
+    <p>Clear separation between HTMX (server-rendered panels) and Leaflet (client-side map):</p>
+
+    <table>
+      <thead>
+        <tr><th>Component</th><th>Technology</th><th>Behavior</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Interactive Map</td><td>Leaflet.js</td><td>Client-side JS. Fetches entity GeoJSON from <code>/api/entities</code>, renders colored markers.</td></tr>
+        <tr><td>Entity Detail Panel</td><td>HTMX</td><td>On marker click, <code>hx-get="/entity/{id}/panel"</code> swaps in a server-rendered HTML panel with metrics, recent reports, and the AI advisory.</td></tr>
+        <tr><td>Report Submission</td><td>HTMX</td><td><code>hx-post="/reports"</code> with multipart form (photo + location). Shows success/loading states inline.</td></tr>
+        <tr><td>Report Feed</td><td>HTMX</td><td><code>hx-get="/entity/{id}/reports"</code> loads a paginated list of recent community reports.</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2 id="pre-seed-strategy">7. Pre-Seed Data Strategy</h2>
+
+    <p><strong>Do NOT rely on live API calls during the demo.</strong> Before the hackathon demo window:</p>
+    <ol>
+      <li>Pre-load <strong>20–30 real water bodies</strong> (NYC/NJ area) into <code>water_entities</code> with actual USGS historical data.</li>
+      <li>Seed <strong>5–10 synthetic community reports</strong> per entity with realistic images and AI-generated risk labels.</li>
+      <li>Pre-embed <strong>50+ EPA/WHO guideline chunks</strong> into <code>knowledge_chunks</code> with their vector embeddings.</li>
+      <li>Compute safety scores for all entities so the map looks populated and alive on first load.</li>
+    </ol>
+    <p>Live ingestion runs in parallel but the demo never depends on it.</p>
+
+    <hr>
+
+    <h2 id="build-timeline">8. Build Timeline (20 Hours)</h2>
+
+    <table>
+      <thead>
+        <tr><th>Phase</th><th>Hours</th><th>Deliverable</th><th>Risk</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Phase 1: Foundation</strong></td><td>0–4h</td><td>Go project scaffold, MongoDB Atlas cluster, collections + indexes, S3 bucket, basic REST endpoints (<code>/api/entities</code>, <code>/api/reports</code>)</td><td>🟢 Low</td></tr>
+        <tr><td><strong>Phase 2: Data Pipeline</strong></td><td>4–8h</td><td>USGS ingestion routine, S3 image upload endpoint, pre-seed script, safety score computation</td><td>🟢 Low</td></tr>
+        <tr><td><strong>Phase 3: AI Layer</strong></td><td>8–12h</td><td>Bedrock multimodal image analysis, Change Stream watcher, knowledge chunk embedding, Vector Search RAG pipeline</td><td>🟡 Medium</td></tr>
+        <tr><td><strong>Phase 4: Frontend</strong></td><td>12–16h</td><td>Leaflet map with GeoJSON markers, HTMX detail panels, report submission form, responsive layout</td><td>🟡 Medium</td></tr>
+        <tr><td><strong>Phase 5: Polish &amp; Demo</strong></td><td>16–20h</td><td>UI polish, error handling, README + architecture diagram, demo rehearsal, deployment</td><td>🟢 Low</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <p><strong>Built-in buffer:</strong> Each phase has ~1h of slack. If Phase 3 (AI) runs long, Phase 5 absorbs it. If everything goes smoothly, Phase 5 becomes premium polish time.</p>
+    </blockquote>
+
+    <h3>Scope Cutline (if behind schedule)</h3>
+    <ul>
+      <li><strong>Cut first:</strong> Live USGS ingestion (pre-seeded data covers this).</li>
+      <li><strong>Cut second:</strong> RAG advisory (replace with a simpler template-based advisory using sensor thresholds).</li>
+      <li><strong>Never cut:</strong> The map, community reports, Bedrock image analysis, MongoDB geospatial queries. These are the core demo.</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="mongodb-track-story">9. MongoDB Track Narrative</h2>
+
+    <p>For the "Best Use of MongoDB" pitch, we demonstrate <strong>five distinct MongoDB capabilities</strong> in a single coherent application:</p>
+
+    <ol>
+      <li><strong>Geospatial Indexing (<code>2dsphere</code>)</strong> — Powering the map: find all water entities and reports within a bounding box, proximity queries for nearby reports.</li>
+      <li><strong>Atlas Vector Search</strong> — RAG retrieval: semantic search over embedded EPA/WHO safety guidelines to provide context-aware advisories.</li>
+      <li><strong>Change Streams</strong> — Event-driven architecture: new community report → triggers AI analysis → updates safety score, all reactive with no polling.</li>
+      <li><strong>Aggregation Pipelines (<code>$lookup</code>, <code>$geoNear</code>)</strong> — Joining entities with their reports, computing rolling averages of community risk scores, filtering by recency and proximity.</li>
+      <li><strong>Atlas (Cloud-Native)</strong> — Fully managed cluster with monitoring, scaling, and integrated search — no self-hosted infrastructure.</li>
+    </ol>
+
+    <hr>
+
+    <h2 id="key-changes-from-v1">10. Changes from Original Spec (v1 → v2)</h2>
+
+    <table>
+      <thead>
+        <tr><th>Change</th><th>Rationale</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Removed AWS Rekognition</td><td>Bedrock multimodal handles image analysis + reasoning in one call. Eliminates an entire service integration and ~2h of config.</td></tr>
+        <tr><td>Split schema into 3 collections</td><td>Avoids unbounded embedded arrays. Enables independent indexing. Demonstrates <code>$lookup</code> aggregation for the MongoDB track.</td></tr>
+        <tr><td>Added Change Streams</td><td>Event-driven report processing is a killer MongoDB feature that costs ~30min to implement and massively strengthens the track pitch.</td></tr>
+        <tr><td>Added pre-seed strategy</td><td>Demo never depends on live API calls. Map looks alive from first load.</td></tr>
+        <tr><td>Added scope cutline</td><td>Explicit fallback plan if we run behind. No panic at hour 18.</td></tr>
+        <tr><td>Defined HTMX vs Leaflet boundaries</td><td>Clear ownership: Leaflet = map, HTMX = everything else. No ambiguity during build.</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</body>
+
+</html>
+</code></pre>
