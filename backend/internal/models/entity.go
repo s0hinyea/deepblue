@@ -20,14 +20,15 @@ type GeoPoint struct {
 }
 
 type WaterEntity struct {
-	ID             bson.ObjectID `bson:"_id,omitempty"    json:"id"`
-	Name           string             `bson:"name"             json:"name"`
-	Location       GeoPoint           `bson:"location"         json:"location"`
-	OfficialMetrics OfficialMetrics   `bson:"official_metrics" json:"official_metrics"`
-	SafetyScore    float64            `bson:"safety_score"     json:"safety_score"`
-	SafetyLabel    string             `bson:"safety_label"     json:"safety_label"`
-	ReportCount    int                `bson:"report_count"     json:"report_count"`
-	LastReportAt   time.Time          `bson:"last_report_at"   json:"last_report_at"`
+	ID              bson.ObjectID   `bson:"_id,omitempty"    json:"id"`
+	SiteID          string          `bson:"site_id"          json:"site_id"`
+	Name            string          `bson:"name"             json:"name"`
+	Location        GeoPoint        `bson:"location"         json:"location"`
+	OfficialMetrics OfficialMetrics `bson:"official_metrics" json:"official_metrics"`
+	SafetyScore     float64         `bson:"safety_score"     json:"safety_score"`
+	SafetyLabel     string          `bson:"safety_label"     json:"safety_label"`
+	ReportCount     int             `bson:"report_count"     json:"report_count"`
+	LastReportAt    time.Time       `bson:"last_report_at"   json:"last_report_at"`
 }
 
 // SafetyLabel derives a label string from a numeric score.

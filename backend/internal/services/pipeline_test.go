@@ -113,7 +113,7 @@ func TestPipeline_GenerateAdvisory(t *testing.T) {
 		"Elevated pH above 8.5 combined with warm water temperatures can indicate cyanobacteria bloom conditions.",
 	}
 
-	advisory, err := services.GenerateAdvisory(ctx, entity, guidelines)
+	advisory, err := services.GenerateAdvisory(ctx, entity, guidelines, "Community Visual Reports: None submitted in the last 30 days.")
 	if err != nil {
 		t.Fatalf("GenerateAdvisory error: %v", err)
 	}
