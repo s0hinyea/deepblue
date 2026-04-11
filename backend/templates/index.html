@@ -412,9 +412,14 @@ select.fi option { background: var(--card); }
 .adv-btn:hover { background: var(--blue-dim); box-shadow: 0 0 18px var(--blue-glow); }
 .adv-btn:disabled { opacity: .45; cursor: not-allowed; }
 #advisory-out {
-  flex: 1; font-size: 11.5px; line-height: 1.75; color: var(--muted-l);
-  display: none; animation: fadein .4s ease;
+  flex: 1; display: none; animation: fadein .4s ease;
 }
+.adv-section { margin-bottom: 10px; }
+.adv-section-label {
+  font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--blue-bright); margin-bottom: 4px; font-family: var(--mono);
+}
+.adv-section-text { font-size: 11.5px; line-height: 1.75; color: var(--muted-l); }
 @keyframes fadein { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
 
 /* ════════════════════ TOASTS ════════════════════ */
@@ -529,7 +534,16 @@ select.fi option { background: var(--card); }
 
     <div class="sheet-advisory">
       <button class="adv-btn" id="adv-btn" onclick="fetchAdvisory()">✦ AI Advisory</button>
-      <div id="advisory-out"></div>
+      <div id="advisory-out">
+        <div class="adv-section" id="adv-sensor" style="display:none">
+          <div class="adv-section-label">Sensor &amp; Guidelines</div>
+          <div class="adv-section-text" id="adv-sensor-text"></div>
+        </div>
+        <div class="adv-section" id="adv-community" style="display:none">
+          <div class="adv-section-label">Community Reports</div>
+          <div class="adv-section-text" id="adv-community-text"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -545,12 +559,12 @@ select.fi option { background: var(--card); }
 
     <!-- State 1: Form -->
     <div id="modal-form-state">
-      <div class="modal-title">📷 Community Report</div>
+      <div class="modal-title">Community Report</div>
       <div class="modal-sub">Spotted something concerning? Upload a photo of the water and our AI will analyze it for safety risks in real-time.</div>
 
       <form class="form-col" id="report-form" onsubmit="submitReport(event)">
         <div class="field-group">
-          <label class="field-label">📍 Select Station</label>
+          <label class="field-label">Select Station</label>
           <div class="station-picker">
             <input type="text" class="search-input" id="modal-search" placeholder="Search for a station…" oninput="filterModalStations()">
             <div class="station-list" id="modal-station-list"></div>
@@ -559,16 +573,16 @@ select.fi option { background: var(--card); }
         </div>
 
         <div class="field-group">
-          <label class="field-label">🖼️ Upload Photo</label>
+          <label class="field-label">Upload Photo</label>
           <div class="drop-zone" id="modal-drop-zone">
             <input type="file" name="image" id="modal-file-input" accept="image/*" required onchange="onModalFileChange(this)">
-            <span class="drop-icon">📸</span>
+            <span class="drop-icon" style="font-size:14px;color:var(--muted-l)">▲</span>
             <div class="drop-lbl">Drag & drop your photo here<br>or <span>click to browse</span></div>
             <div id="modal-fname"></div>
           </div>
         </div>
 
-        <button type="submit" class="modal-submit" id="modal-submit-btn">⚡ Submit Report</button>
+        <button type="submit" class="modal-submit" id="modal-submit-btn">Submit Report</button>
       </form>
     </div>
 
@@ -748,6 +762,7 @@ function filterModalStations() {
 // ── Select site ────────────────────────────────────────────────────────────────
 function selectSite(id) {
   console.log('[DeepBlue] selectSite called, id=', id);
+  const isNew = selected !== id;
   selected = id;
   const e = entities.find(x => x.site_id === id);
   console.log('[DeepBlue] entity found=', !!e);
@@ -764,11 +779,11 @@ function selectSite(id) {
   const c = e.location && e.location.coordinates;
   if (c) map.panTo([c[1], c[0]], { animate: true, duration: 0.5 });
 
-  openSheet(e);
+  openSheet(e, isNew);
 }
 
 // ── Bottom sheet ───────────────────────────────────────────────────────────────
-function openSheet(e) {
+function openSheet(e, isNew = false) {
   const m   = metrics(e);
   const lbl = e.safety_label || '';
 
@@ -787,11 +802,16 @@ function openSheet(e) {
   setBar('fill-temp', m.temp != null ? (m.temp / 35) * 100 : 0, m.temp != null && m.temp > 25 ? 'warn' : '');
   setBar('fill-turb', m.turb != null ? (m.turb / 50) * 100 : 0, m.turb != null && (m.turb > 25 ? 'danger' : m.turb > 15 ? 'warn' : ''));
 
-  // Reset advisory
-  const adv = document.getElementById('advisory-out');
-  adv.style.display = 'none'; adv.textContent = '';
-  const btn = document.getElementById('adv-btn');
-  btn.disabled = false; btn.textContent = '✦ AI Advisory';
+  // Reset advisory only if opening a new/different sheet
+  if (isNew) {
+    document.getElementById('advisory-out').style.display = 'none';
+    document.getElementById('adv-sensor').style.display = 'none';
+    document.getElementById('adv-community').style.display = 'none';
+    document.getElementById('adv-sensor-text').textContent = '';
+    document.getElementById('adv-community-text').textContent = '';
+    const btn = document.getElementById('adv-btn');
+    btn.disabled = false; btn.textContent = '✦ AI Advisory';
+  }
 
   const sheet = document.getElementById('detail-sheet');
   console.log('[DeepBlue] openSheet adding .open, sheet=', sheet);
@@ -823,11 +843,17 @@ async function fetchAdvisory() {
 
   try {
     const data = await fetch(`/api/entity/${selected}/advisory`).then(r => r.json());
-    out.textContent = data.advisory || 'No advisory available.';
+    const sensorEl    = document.getElementById('adv-sensor');
+    const communityEl = document.getElementById('adv-community');
+    document.getElementById('adv-sensor-text').textContent    = data.sensor_advisory    || '';
+    document.getElementById('adv-community-text').textContent = data.community_advisory || '';
+    sensorEl.style.display    = data.sensor_advisory    ? 'block' : 'none';
+    communityEl.style.display = data.community_advisory ? 'block' : 'none';
     out.style.display = 'block';
     btn.textContent = '↺ Refresh';
   } catch {
-    out.textContent = 'Failed to generate advisory.';
+    document.getElementById('adv-sensor-text').textContent = 'Failed to generate advisory.';
+    document.getElementById('adv-sensor').style.display = 'block';
     out.style.display = 'block';
     btn.textContent = '✦ AI Advisory';
   }
@@ -841,7 +867,7 @@ async function fetchEntities() {
     renderList(); renderMarkers(); populateSelect();
     if (selected) {
       const e = entities.find(x => x.site_id === selected);
-      if (e) openSheet(e);
+      if (e) openSheet(e, false);
     }
   } catch(err) { console.error('fetchEntities:', err); }
 }
@@ -869,7 +895,7 @@ function openReportModal() {
   document.getElementById('modal-site-id').value = '';
   modalPickedSiteId = '';
   document.getElementById('modal-submit-btn').disabled = false;
-  document.getElementById('modal-submit-btn').innerHTML = '⚡ Submit Report';
+  document.getElementById('modal-submit-btn').innerHTML = 'Submit Report';
   renderModalStations();
   modal.classList.add('open');
 }
@@ -966,7 +992,7 @@ async function submitReport(e) {
     document.getElementById('modal-proc-state').classList.add('hidden');
     document.getElementById('modal-form-state').classList.remove('hidden');
     btn.disabled = false;
-    btn.innerHTML = '⚡ Submit Report';
+    btn.innerHTML = 'Submit Report';
     toast('Upload failed. Please try again.');
   }
 }
