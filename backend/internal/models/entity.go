@@ -51,24 +51,40 @@ func SafetyLabel(score float64) string {
 // ΔpH_norm  = abs(ph - 7.0) / 7.0          (max deviation from neutral, clamped 0–1)
 // T_norm    = turbidity_ntu / 25.0          (EPA recreational threshold ≈ 25 NTU, clamped 0–1)
 // V_avg     = average AI confidence from last 5 community reports (0–1)
+// ComputeSafetyScore calculates a 0–1 risk score using only the metrics that
+// were actually measured (non-zero). Missing sensors are excluded and their
+// weight is redistributed so the score is never inflated by absent data.
 func ComputeSafetyScore(ph, turbidityNTU, vAvg float64) float64 {
-	const (
-		wPH   = 0.3
-		wTurb = 0.3
-		wVis  = 0.4
-	)
+	score, totalWeight := 0.0, 0.0
 
-	phNorm := abs(ph-7.0) / 7.0
-	if phNorm > 1.0 {
-		phNorm = 1.0
+	if ph != 0 {
+		phNorm := abs(ph-7.0) / 7.0
+		if phNorm > 1.0 {
+			phNorm = 1.0
+		}
+		score += 0.3 * phNorm
+		totalWeight += 0.3
 	}
 
-	tNorm := turbidityNTU / 25.0
-	if tNorm > 1.0 {
-		tNorm = 1.0
+	if turbidityNTU != 0 {
+		tNorm := turbidityNTU / 25.0
+		if tNorm > 1.0 {
+			tNorm = 1.0
+		}
+		score += 0.3 * tNorm
+		totalWeight += 0.3
 	}
 
-	return wPH*phNorm + wTurb*tNorm + wVis*vAvg
+	if vAvg != 0 {
+		score += 0.4 * vAvg
+		totalWeight += 0.4
+	}
+
+	if totalWeight == 0 {
+		return 0
+	}
+	// Normalise so a station with only one sensor isn't artificially low-scored.
+	return score / totalWeight
 }
 
 func abs(x float64) float64 {
