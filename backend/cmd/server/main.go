@@ -42,6 +42,7 @@ func main() {
 	mux.HandleFunc("GET /", handlers.HomeHandler)
 	mux.HandleFunc("GET /api/entities", handlers.EntitiesHandler)
 	mux.HandleFunc("POST /api/reports", handlers.ReportsHandler)
+	mux.HandleFunc("GET /api/reports/{id}", handlers.ReportStatusHandler)
 	mux.HandleFunc("GET /api/entity/{id}/advisory", handlers.AdvisoryHandler)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
