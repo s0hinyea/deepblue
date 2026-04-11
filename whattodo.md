@@ -50,6 +50,9 @@ If `POST /api/reports` fails (for example, S3 or backend errors), the submit but
 - **Station cards:** Consider only showing stations that have at least one non-null metric in the sidebar to reduce clutter
 - **Rebalance the layout:** The map currently dominates the screen while the station list and upload panel feel less prominent. Rework the layout so the non-map information is easier to scan and interact with
 - **Improve visual hierarchy and readability:** The current dark palette makes some sidebar/upload text hard to read. Increase contrast and make the site list and upload section more legible and informative
+- **Strengthen card-to-map linking:** When a user clicks a sidebar card, make the corresponding map point much more prominent. Consider changing its size, color, glow, or shape so it stands out even inside dense clusters of nearby stations
+- **Complete map-to-card linking:** Clicking a map point should also locate and visibly highlight the matching sidebar card so the relationship works in both directions
+- **Add linked brushing mode:** Add a toggleable interaction mode where users can brush/select points on the map and filter the sidebar card list to the brushed subset. In that mode, clicking or brushing map points should act like a selection/filtering tool rather than only a navigation action
 - **MongoDB flex badge:** Add a small badge somewhere on the advisory panel: *"Powered by Atlas Vector Search + Change Streams"* — good for the MongoDB track judges
 
 ---
