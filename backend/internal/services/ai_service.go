@@ -106,7 +106,7 @@ Example: ["algae","turbid"]`
 // GenerateAdvisory calls Claude 3.5 Sonnet with the water entity's live metrics
 // plus the top RAG paragraphs from the EPA/WHO knowledge base, and returns a
 // 2-sentence plain-English safety advisory.
-func GenerateAdvisory(ctx context.Context, entity models.WaterEntity, manualParagraphs []string) (string, error) {
+func GenerateAdvisory(ctx context.Context, entity models.WaterEntity, manualParagraphs []string, communityContext string) (string, error) {
 	brc, err := newBedrockClient(ctx)
 	if err != nil {
 		return "", err
@@ -135,16 +135,19 @@ Location:     %s
 %s
 Safety Score: %.2f / 1.0  (0 = safe, 1 = dangerous)
 
+%s
+
 Relevant EPA / WHO guidelines:
 %s
 
-Write exactly 2 sentences directed at the public. Only reference sensor readings that were actually measured — do not comment on metrics marked "not measured". Mention any risks and whether the location is currently safe for contact recreation.
+Write exactly 2–3 sentences directed at the public. Reference both sensor data and community visual reports when available. Only reference sensor readings that were actually measured — do not comment on metrics marked "not measured". Mention any risks and whether the location is currently safe for contact recreation.
 No bullet points. No headers.`,
 		entity.Name,
 		phLine,
 		tempLine,
 		turbLine,
 		entity.SafetyScore,
+		communityContext,
 		guidelines,
 	)
 
