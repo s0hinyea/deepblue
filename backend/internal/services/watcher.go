@@ -26,6 +26,7 @@ import (
 //  4. Recomputes the safety score (sensor data + visual risk).
 //  5. Persists the new score and label back to the entity.
 func WatchReports(ctx context.Context) {
+	log.Println("[WATCHER] Opening change stream on community_reports...")
 	stream, err := db.ReportsCollection.Watch(ctx, mongo.Pipeline{})
 	if err != nil {
 		log.Fatalf("[WATCHER] Failed to open change stream: %v", err)
@@ -34,19 +35,29 @@ func WatchReports(ctx context.Context) {
 
 	log.Println("[WATCHER] Listening for new community reports...")
 
-	for stream.Next(ctx) {
+	for {
+		log.Println("[WATCHER] Waiting for next change-stream event...")
+		if !stream.Next(ctx) {
+			log.Printf("[WATCHER] stream.Next returned false (ctx_err=%v, stream_err=%v)", ctx.Err(), stream.Err())
+			break
+		}
+
 		var event bson.M
 		if err := stream.Decode(&event); err != nil {
 			log.Printf("[WATCHER] Decode error: %v", err)
 			continue
 		}
 
-		if opType, _ := event["operationType"].(string); opType != "insert" {
+		opType, _ := event["operationType"].(string)
+		log.Printf("[WATCHER] Change event received (operationType=%q)", opType)
+		if opType != "insert" {
+			log.Printf("[WATCHER] Ignoring non-insert event: %q", opType)
 			continue
 		}
 
-		fullDoc, ok := event["fullDocument"].(bson.M)
-		if !ok {
+		fullDoc, err := toBsonM(event["fullDocument"])
+		if err != nil {
+			log.Printf("[WATCHER] Insert event fullDocument had unexpected type=%T err=%v; raw keys=%v", event["fullDocument"], err, bsonKeys(event))
 			continue
 		}
 
@@ -54,7 +65,7 @@ func WatchReports(ctx context.Context) {
 		siteID, _ := fullDoc["site_id"].(string)
 		reportID, _ := fullDoc["_id"].(bson.ObjectID)
 
-		log.Printf("[WATCHER] Detected new survey! Image at: %s", imageURL)
+		log.Printf("[WATCHER] Detected new survey! report_id=%s site_id=%q image_url=%q", reportID.Hex(), siteID, imageURL)
 
 		// Offload to a goroutine so the change stream cursor keeps advancing.
 		go processReport(ctx, reportID, imageURL, siteID)
@@ -67,6 +78,7 @@ func WatchReports(ctx context.Context) {
 
 // processReport executes the AI pipeline for one newly inserted report.
 func processReport(ctx context.Context, reportID bson.ObjectID, imageURL, siteID string) {
+	log.Printf("[WATCHER] processReport starting (report_id=%s site_id=%q image_url=%q)", reportID.Hex(), siteID, imageURL)
 	opCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -84,6 +96,8 @@ func processReport(ctx context.Context, reportID bson.ObjectID, imageURL, siteID
 		bson.M{"$set": bson.M{"ai_tags": tags}},
 	); err != nil {
 		log.Printf("[WATCHER] Failed to save AI tags: %v", err)
+	} else {
+		log.Printf("[WATCHER] Saved ai_tags onto report %s", reportID.Hex())
 	}
 
 	if siteID == "" {
@@ -119,6 +133,28 @@ func processReport(ctx context.Context, reportID bson.ObjectID, imageURL, siteID
 	}
 
 	log.Printf("[WATCHER] Entity %s updated — score=%.3f label=%s (vAvg=%.2f)", siteID, score, label, vAvg)
+}
+
+func bsonKeys(doc bson.M) []string {
+	keys := make([]string, 0, len(doc))
+	for k := range doc {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func toBsonM(v any) (bson.M, error) {
+	data, err := bson.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	var out bson.M
+	if err := bson.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
 
 // visualRiskScore maps AI-detected tags to a 0–1 visual-risk penalty (vAvg).

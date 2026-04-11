@@ -5,8 +5,11 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -36,8 +39,9 @@ type contentBlock struct {
 }
 
 type imageSource struct {
-	Type string `json:"type"` // "url"
-	URL  string `json:"url"`
+	Type      string `json:"type"` // "base64"
+	MediaType string `json:"media_type,omitempty"`
+	Data      string `json:"data,omitempty"`
 }
 
 type claudeResponse struct {
@@ -52,9 +56,15 @@ type claudeResponse struct {
 // AnalyzeImageLabels sends the image at imageURL to Claude 3.5 Sonnet and
 // returns a slice of water-risk tags (e.g. ["algae", "turbid"]).
 //
-// The S3 bucket must allow public reads so Bedrock can fetch the image URL.
+// The uploaded S3 object must be publicly readable so the app can fetch the
+// bytes and forward them to Bedrock as a base64 image block.
 func AnalyzeImageLabels(ctx context.Context, imageURL string) ([]string, error) {
 	brc, err := newBedrockClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	image, err := fetchImageSource(ctx, imageURL)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +83,7 @@ Example: ["algae","turbid"]`
 		Messages: []claudeMessage{{
 			Role: "user",
 			Content: []contentBlock{
-				{Type: "image", Source: &imageSource{Type: "url", URL: imageURL}},
+				{Type: "image", Source: image},
 				{Type: "text", Text: prompt},
 			},
 		}},
@@ -164,6 +174,48 @@ func invokeClaudeRaw(ctx context.Context, brc *bedrockruntime.Client, req claude
 		return "", fmt.Errorf("empty response from Claude")
 	}
 	return strings.TrimSpace(resp.Content[0].Text), nil
+}
+
+func fetchImageSource(ctx context.Context, imageURL string) (*imageSource, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build image request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch image: unexpected HTTP status %d", resp.StatusCode)
+	}
+
+	imageBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read image: %w", err)
+	}
+	if len(imageBytes) == 0 {
+		return nil, fmt.Errorf("read image: empty body")
+	}
+
+	mediaType := resp.Header.Get("Content-Type")
+	if mediaType == "" || mediaType == "application/octet-stream" {
+		mediaType = http.DetectContentType(imageBytes)
+	}
+
+	switch mediaType {
+	case "image/jpeg", "image/png", "image/gif", "image/webp":
+	default:
+		return nil, fmt.Errorf("unsupported image media type %q", mediaType)
+	}
+
+	return &imageSource{
+		Type:      "base64",
+		MediaType: mediaType,
+		Data:      base64.StdEncoding.EncodeToString(imageBytes),
+	}, nil
 }
 
 func newBedrockClient(ctx context.Context) (*bedrockruntime.Client, error) {
