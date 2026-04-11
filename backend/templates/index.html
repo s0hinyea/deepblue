@@ -496,8 +496,10 @@ function populateSelect() {
 
 // ── Select site ────────────────────────────────────────────────────────────────
 function selectSite(id) {
+  console.log('[DeepBlue] selectSite called, id=', id);
   selected = id;
   const e = entities.find(x => x.site_id === id);
+  console.log('[DeepBlue] entity found=', !!e);
   if (!e) return;
 
   document.querySelectorAll('.site-card').forEach(c =>
@@ -540,7 +542,10 @@ function openSheet(e) {
   const btn = document.getElementById('adv-btn');
   btn.disabled = false; btn.textContent = '✦ AI Advisory';
 
-  document.getElementById('detail-sheet').classList.add('open');
+  const sheet = document.getElementById('detail-sheet');
+  console.log('[DeepBlue] openSheet adding .open, sheet=', sheet);
+  sheet.classList.add('open');
+  console.log('[DeepBlue] sheet classes after add:', sheet.className);
 }
 
 function closeSheet() {
