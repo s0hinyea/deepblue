@@ -8,6 +8,7 @@ Welcome! The backend is fully implemented and running. Here's everything you nee
 
 - Pull the `test_frontend` branch — that's the active branch with the latest frontend + all backend routes wired up
 - Get the `.env` file from Sohil (MongoDB URI, AWS keys, S3 bucket name) — put it inside the `backend/` folder
+- Ensure the S3 bucket in `.env` actually exists and allows public reads for uploaded objects, since the watcher/Bedrock path depends on reachable image URLs
 - Run the server: `cd backend && go run cmd/server/main.go`
 - Open `http://localhost:8080` — you should see a dark Leaflet map with NY water stations populating within a few seconds
 
@@ -33,13 +34,22 @@ Clicking a map marker or a station card in the sidebar should slide up a detail 
 - Revert the final log line back to: `log.Printf("[USGS] Sync complete — %d NY sites upserted.", synced)`
 - Remove the `| setFields=%v` from the upsert error log
 
+### BUG 3 — Upload button gets stuck on failure (UX BUG)
+If `POST /api/reports` fails (for example, S3 or backend errors), the submit button can stay stuck in the `Uploading...` state.
+- Make sure the failure path resets the button text/state back to normal
+- Ensure the user still sees the error toast/message when the upload fails
+- Verify both success and error responses restore the form to an interactive state
+
 ---
 
 ## 3. UI/UX Polish
 
 - **Color-coded map pins:** Change marker color based on `safety_label` from `GET /api/entities`. Green = SAFE, Orange = CAUTION, Red = UNSAFE, Grey = UNKNOWN
+- **Expose richer station state:** Show more than just a coarse `safe` / `moderate` / `dangerous` / `unknown` label. Surface metrics, score context, recent report info, or AI-derived details where helpful
 - **AI Advisory button:** In the bottom sheet, the "Load AI Analysis" button should fire `GET /api/entity/{id}/advisory` (HTMX or fetch). Show a loading spinner while it waits (takes 1–3 seconds). Display the returned `advisory` text in the sheet
 - **Station cards:** Consider only showing stations that have at least one non-null metric in the sidebar to reduce clutter
+- **Rebalance the layout:** The map currently dominates the screen while the station list and upload panel feel less prominent. Rework the layout so the non-map information is easier to scan and interact with
+- **Improve visual hierarchy and readability:** The current dark palette makes some sidebar/upload text hard to read. Increase contrast and make the site list and upload section more legible and informative
 - **MongoDB flex badge:** Add a small badge somewhere on the advisory panel: *"Powered by Atlas Vector Search + Change Streams"* — good for the MongoDB track judges
 
 ---
