@@ -95,6 +95,51 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #site-list::-webkit-scrollbar { width: 3px; }
 #site-list::-webkit-scrollbar-thumb { background: var(--border-b); border-radius: 3px; }
 
+/* Search bars */
+.search-wrap {
+  padding: 6px 10px 4px; flex-shrink: 0;
+}
+.search-input {
+  width: 100%; background: var(--card); border: 1px solid var(--border);
+  color: var(--white); border-radius: 8px; padding: 9px 12px 9px 34px;
+  font-size: 12px; font-family: var(--sans); outline: none;
+  transition: border-color .18s, box-shadow .18s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%237a91ae' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='6' cy='6' r='4.5'/%3E%3Cline x1='9.5' y1='9.5' x2='13' y2='13'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 11px center;
+}
+.search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
+.search-input::placeholder { color: var(--muted); }
+
+/* Modal station picker */
+.station-picker { display: flex; flex-direction: column; gap: 6px; }
+.station-picker .search-input {
+  padding: 10px 12px 10px 36px; font-size: 13px; border-radius: 10px;
+  border-color: var(--border-b);
+}
+.station-list {
+  max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
+  border: 1px solid var(--border); border-radius: 10px; padding: 6px;
+  background: var(--card);
+}
+.station-list::-webkit-scrollbar { width: 3px; }
+.station-list::-webkit-scrollbar-thumb { background: var(--border-b); border-radius: 3px; }
+.station-opt {
+  padding: 8px 10px; border-radius: 6px; cursor: pointer;
+  font-size: 12px; color: var(--muted-l); transition: all .15s;
+  border: 1px solid transparent;
+}
+.station-opt:hover { background: var(--card-hover); color: var(--white); }
+.station-opt.picked {
+  background: var(--blue-dim); color: var(--blue-bright);
+  border-color: var(--blue);
+}
+.station-opt .so-id {
+  font-size: 9px; color: var(--muted); font-family: var(--mono); margin-top: 2px;
+}
+.no-results {
+  padding: 12px; text-align: center; font-size: 11px; color: var(--muted);
+}
+
 .site-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 10px; padding: 13px 15px;
@@ -119,40 +164,168 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .sc-ml { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
 .sc-mv { font-family: var(--mono); font-size: 13px; font-weight: 500; }
 
-/* Report form */
-.report-section {
-  border-top: 1px solid var(--border);
-  padding: 14px 22px 18px; flex-shrink: 0; background: var(--surface);
+/* ════════════════════ FAB BUTTON ════════════════════ */
+.fab {
+  position: fixed; bottom: 28px; right: 28px; z-index: 500;
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #1d4ed8, var(--blue));
+  color: #fff; font-size: 28px; line-height: 1;
+  cursor: pointer; display: grid; place-items: center;
+  box-shadow: 0 4px 24px rgba(59,130,246,.5), 0 0 0 0 rgba(59,130,246,.3);
+  transition: all .25s ease;
 }
-.report-section .section-label { padding: 0 0 10px; }
-.form-col { display: flex; flex-direction: column; gap: 7px; }
-select.fi, .fi {
-  width: 100%; background: var(--card); border: 1px solid var(--border);
-  color: var(--white); border-radius: 8px; padding: 8px 11px;
-  font-size: 11.5px; font-family: var(--sans); outline: none;
-  transition: border-color .18s; appearance: none;
+.fab:hover {
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 6px 36px rgba(59,130,246,.6), 0 0 0 8px rgba(59,130,246,.1);
 }
-select.fi:focus { border-color: var(--blue); }
+.fab-label {
+  position: fixed; bottom: 38px; right: 92px; z-index: 500;
+  background: var(--card); border: 1px solid var(--border-b);
+  color: var(--white); font-size: 12px; font-weight: 600;
+  padding: 6px 14px; border-radius: 8px; pointer-events: none;
+  opacity: 0; transform: translateX(6px);
+  transition: all .2s ease; white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+.fab:hover + .fab-label { opacity: 1; transform: translateX(0); }
+
+/* ════════════════════ REPORT MODAL ════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(7,9,13,.7);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal-card {
+  background: var(--surface); border: 1px solid var(--border-b);
+  border-radius: 18px; padding: 32px 36px;
+  width: 440px; max-width: 92vw; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04), 0 0 60px rgba(59,130,246,.1);
+  transform: translateY(12px) scale(.97); transition: transform .3s ease;
+  position: relative;
+}
+.modal-overlay.open .modal-card { transform: translateY(0) scale(1); }
+
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--border-b);
+  color: var(--muted-l); font-size: 18px; line-height: 1;
+  cursor: pointer; display: grid; place-items: center; transition: all .18s;
+}
+.modal-close:hover { background: var(--border-b); color: var(--white); }
+
+.modal-title {
+  font-size: 18px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+.modal-sub { font-size: 11.5px; color: var(--muted-l); margin-bottom: 22px; line-height: 1.5; }
+
+.form-col { display: flex; flex-direction: column; gap: 14px; }
+.field-group { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-size: 10px; font-weight: 600; color: var(--muted-l);
+  text-transform: uppercase; letter-spacing: .1em;
+}
+select.fi {
+  width: 100%; background: var(--card); border: 1px solid var(--border-b);
+  color: var(--white); border-radius: 10px; padding: 12px 36px 12px 14px;
+  font-size: 13px; font-family: var(--sans); outline: none;
+  transition: border-color .18s, box-shadow .18s; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a91ae'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+  cursor: pointer;
+}
+select.fi:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
 select.fi option { background: var(--card); }
+
 .drop-zone {
-  border: 1px dashed var(--border-b); border-radius: 8px;
-  padding: 11px; text-align: center; cursor: pointer; position: relative; transition: all .2s;
+  border: 2px dashed var(--border-b); border-radius: 12px;
+  padding: 28px 16px; text-align: center; cursor: pointer;
+  position: relative; transition: all .25s;
+  background: rgba(59,130,246,.03);
 }
-.drop-zone:hover, .drop-zone.over { border-color: var(--blue); background: var(--blue-dim); }
+.drop-zone:hover, .drop-zone.over {
+  border-color: var(--blue); background: var(--blue-dim);
+  box-shadow: 0 0 24px rgba(59,130,246,.12);
+}
 .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
-.drop-lbl { font-size: 10.5px; color: var(--muted-l); pointer-events: none; }
-.drop-lbl span { color: var(--blue-bright); }
-#fname { font-size: 9.5px; color: var(--blue-bright); font-family: var(--mono); margin-top: 2px; min-height: 14px; }
-.submit-btn {
-  width: 100%; padding: 10px; border: none; border-radius: 8px;
-  background: var(--blue); color: #fff;
-  font-size: 11.5px; font-weight: 700; letter-spacing: .09em;
-  text-transform: uppercase; cursor: pointer; transition: all .2s;
-  box-shadow: 0 0 22px rgba(59,130,246,.28);
-  display: flex; align-items: center; justify-content: center; gap: 6px;
+.drop-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+.drop-lbl { font-size: 12px; color: var(--muted-l); pointer-events: none; line-height: 1.6; }
+.drop-lbl span { color: var(--blue-bright); font-weight: 600; }
+#modal-fname { font-size: 10px; color: var(--blue-bright); font-family: var(--mono); margin-top: 6px; min-height: 14px; }
+
+.modal-submit {
+  width: 100%; padding: 14px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #1d4ed8, var(--blue));
+  color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; cursor: pointer; transition: all .25s;
+  box-shadow: 0 4px 24px rgba(59,130,246,.4);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.submit-btn:hover { background: var(--blue-bright); box-shadow: 0 0 34px rgba(59,130,246,.45); }
-#notif { min-height: 16px; margin-top: 6px; font-size: 10.5px; }
+.modal-submit:hover { box-shadow: 0 6px 36px rgba(59,130,246,.55); transform: translateY(-1px); }
+.modal-submit:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* ── Modal processing state ── */
+.modal-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; gap: 18px; }
+.modal-state.hidden { display: none; }
+
+.proc-ring {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: 3px solid var(--border-b); border-top-color: var(--blue);
+  animation: spin .8s linear infinite;
+}
+.proc-text { font-size: 13px; color: var(--muted-l); font-weight: 500; }
+.proc-dots::after { content: ''; animation: dots 1.5s steps(3,end) infinite; }
+@keyframes dots {
+  0%   { content: '.'; }
+  33%  { content: '..'; }
+  66%  { content: '...'; }
+}
+
+/* ── Modal success state ── */
+.success-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, #1d4ed8, var(--blue));
+  display: grid; place-items: center;
+  box-shadow: 0 0 40px rgba(59,130,246,.4);
+  animation: pop-in .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop-in { from { transform: scale(0); } to { transform: scale(1); } }
+.success-check {
+  width: 28px; height: 28px; stroke: #fff; stroke-width: 3;
+  fill: none; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 40; stroke-dashoffset: 40;
+  animation: draw-check .4s .2s ease forwards;
+}
+@keyframes draw-check { to { stroke-dashoffset: 0; } }
+.success-title { font-size: 18px; font-weight: 700; color: var(--white); }
+.success-desc {
+  font-size: 12px; color: var(--muted-l); text-align: center;
+  line-height: 1.65; max-width: 320px;
+}
+.success-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+.ai-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 100px;
+  background: rgba(59,130,246,.12); color: var(--blue-bright);
+  border: 1px solid rgba(59,130,246,.25);
+}
+.ai-tag.warn {
+  background: rgba(245,158,11,.12); color: var(--moderate);
+  border-color: rgba(245,158,11,.25);
+}
+.success-done {
+  margin-top: 8px; padding: 10px 28px; border-radius: 8px;
+  background: var(--card); border: 1px solid var(--border-b);
+  color: var(--muted-l); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .18s;
+}
+.success-done:hover { border-color: var(--blue); color: var(--white); }
+
 .toast-success { color: var(--blue-bright); }
 .toast-error   { color: var(--danger); }
 
@@ -295,35 +468,17 @@ select.fi option { background: var(--card); }
       <div class="live-pill"><div class="pulse"></div>LIVE</div>
     </div>
 
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="sidebar-search" placeholder="Search stations…" oninput="filterSidebar()">
+    </div>
+
     <div id="site-list">
       <div class="skel"></div>
       <div class="skel"></div>
       <div class="skel"></div>
     </div>
 
-    <div class="report-section">
-      <div class="section-label" style="padding:0 0 10px">Submit Community Report</div>
-      <form class="form-col"
-            hx-post="/api/reports"
-            hx-encoding="multipart/form-data"
-            hx-target="#notif"
-            hx-swap="innerHTML"
-            onsubmit="onSubmitReport(this)">
 
-        <select name="site_id" id="site-select" class="fi" required>
-          <option value="" disabled selected>Select a station…</option>
-        </select>
-
-        <div class="drop-zone" id="drop-zone">
-          <input type="file" name="image" id="file-input" accept="image/*" required onchange="onFileChange(this)">
-          <div class="drop-lbl">Drop photo or <span>browse</span></div>
-          <div id="fname"></div>
-        </div>
-
-        <button type="submit" class="submit-btn" id="submit-btn">Submit Report</button>
-      </form>
-      <div id="notif"></div>
-    </div>
 
   </aside>
 
@@ -376,6 +531,65 @@ select.fi option { background: var(--card); }
       <button class="adv-btn" id="adv-btn" onclick="fetchAdvisory()">✦ AI Advisory</button>
       <div id="advisory-out"></div>
     </div>
+  </div>
+</div>
+
+<!-- ════════ FAB ════════ -->
+<button class="fab" id="fab-btn" onclick="openReportModal()">+</button>
+<div class="fab-label">Add Community Report</div>
+
+<!-- ════════ REPORT MODAL ════════ -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeReportModal()">×</button>
+
+    <!-- State 1: Form -->
+    <div id="modal-form-state">
+      <div class="modal-title">📷 Community Report</div>
+      <div class="modal-sub">Spotted something concerning? Upload a photo of the water and our AI will analyze it for safety risks in real-time.</div>
+
+      <form class="form-col" id="report-form" onsubmit="submitReport(event)">
+        <div class="field-group">
+          <label class="field-label">📍 Select Station</label>
+          <div class="station-picker">
+            <input type="text" class="search-input" id="modal-search" placeholder="Search for a station…" oninput="filterModalStations()">
+            <div class="station-list" id="modal-station-list"></div>
+            <input type="hidden" name="site_id" id="modal-site-id" required>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">🖼️ Upload Photo</label>
+          <div class="drop-zone" id="modal-drop-zone">
+            <input type="file" name="image" id="modal-file-input" accept="image/*" required onchange="onModalFileChange(this)">
+            <span class="drop-icon">📸</span>
+            <div class="drop-lbl">Drag & drop your photo here<br>or <span>click to browse</span></div>
+            <div id="modal-fname"></div>
+          </div>
+        </div>
+
+        <button type="submit" class="modal-submit" id="modal-submit-btn">⚡ Submit Report</button>
+      </form>
+    </div>
+
+    <!-- State 2: Processing -->
+    <div id="modal-proc-state" class="modal-state hidden">
+      <div class="proc-ring"></div>
+      <div class="proc-text">Analyzing your photo<span class="proc-dots"></span></div>
+      <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">Claude Vision × Atlas Vector Search</div>
+    </div>
+
+    <!-- State 3: Success -->
+    <div id="modal-success-state" class="modal-state hidden">
+      <div class="success-circle">
+        <svg class="success-check" viewBox="0 0 24 24"><polyline points="6 12 10 16 18 8"/></svg>
+      </div>
+      <div class="success-title">Report Submitted</div>
+      <div class="success-desc" id="success-desc">Your photo has been analyzed and the safety score has been updated.</div>
+      <div class="success-tags" id="success-tags"></div>
+      <button class="success-done" onclick="closeReportModal()">Done</button>
+    </div>
+
   </div>
 </div>
 
@@ -436,10 +650,14 @@ function setBar(id, pct, cls) {
 }
 
 // ── Render list ────────────────────────────────────────────────────────────────
-function renderList() {
+function renderList(filter) {
   const el = document.getElementById('site-list');
   el.innerHTML = '';
-  entities.forEach(e => {
+  const q = (filter || '').toLowerCase();
+  const filtered = q ? entities.filter(e => 
+    (e.name || '').toLowerCase().includes(q) || (e.site_id || '').includes(q)
+  ) : entities;
+  filtered.forEach(e => {
     const id = e.site_id || '', lbl = e.safety_label || '';
     const m = metrics(e), active = id === selected;
     const card = document.createElement('div');
@@ -458,6 +676,14 @@ function renderList() {
     card.addEventListener('click', () => selectSite(id));
     el.appendChild(card);
   });
+  if (q && filtered.length === 0) {
+    el.innerHTML = '<div class="no-results">No stations match your search</div>';
+  }
+}
+
+function filterSidebar() {
+  const q = document.getElementById('sidebar-search').value;
+  renderList(q);
 }
 
 // ── Render markers ─────────────────────────────────────────────────────────────
@@ -484,14 +710,39 @@ function renderMarkers() {
 }
 
 function populateSelect() {
-  const sel = document.getElementById('site-select'), cur = sel.value;
-  sel.innerHTML = '<option value="" disabled>Select a station…</option>';
-  entities.forEach(e => {
-    const o = document.createElement('option');
-    o.value = e.site_id || ''; o.textContent = e.name || e.site_id;
-    sel.appendChild(o);
+  renderModalStations();
+}
+
+let modalPickedSiteId = '';
+
+function renderModalStations(filter) {
+  const list = document.getElementById('modal-station-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const q = (filter || '').toLowerCase();
+  const filtered = q ? entities.filter(e =>
+    (e.name || '').toLowerCase().includes(q) || (e.site_id || '').includes(q)
+  ) : entities;
+  filtered.forEach(e => {
+    const opt = document.createElement('div');
+    opt.className = 'station-opt' + (e.site_id === modalPickedSiteId ? ' picked' : '');
+    opt.innerHTML = `<div>${e.name || e.site_id}</div><div class="so-id">${e.site_id}</div>`;
+    opt.addEventListener('click', () => {
+      modalPickedSiteId = e.site_id;
+      document.getElementById('modal-site-id').value = e.site_id;
+      list.querySelectorAll('.station-opt').forEach(o => o.classList.remove('picked'));
+      opt.classList.add('picked');
+    });
+    list.appendChild(opt);
   });
-  if (cur) sel.value = cur;
+  if (q && filtered.length === 0) {
+    list.innerHTML = '<div class="no-results">No stations found</div>';
+  }
+}
+
+function filterModalStations() {
+  const q = document.getElementById('modal-search').value;
+  renderModalStations(q);
 }
 
 // ── Select site ────────────────────────────────────────────────────────────────
@@ -595,35 +846,129 @@ async function fetchEntities() {
   } catch(err) { console.error('fetchEntities:', err); }
 }
 
-// ── File input ─────────────────────────────────────────────────────────────────
-function onFileChange(input) {
-  document.getElementById('fname').textContent = input.files[0]?.name || '';
+// ── Modal report flow ──────────────────────────────────────────────────────────
+function onModalFileChange(input) {
+  document.getElementById('modal-fname').textContent = input.files[0]?.name || '';
 }
-const dz = document.getElementById('drop-zone');
-dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-dz.addEventListener('drop',      () => dz.classList.remove('over'));
+const mdz = document.getElementById('modal-drop-zone');
+if (mdz) {
+  mdz.addEventListener('dragover',  e => { e.preventDefault(); mdz.classList.add('over'); });
+  mdz.addEventListener('dragleave', () => mdz.classList.remove('over'));
+  mdz.addEventListener('drop',      () => mdz.classList.remove('over'));
+}
 
-// ── Report submit ──────────────────────────────────────────────────────────────
-function onSubmitReport(form) {
-  const btn = document.getElementById('submit-btn');
-  btn.innerHTML = '<span class="spin"></span> Uploading…';
+function openReportModal() {
+  const modal = document.getElementById('report-modal');
+  // Reset to form state
+  document.getElementById('modal-form-state').classList.remove('hidden');
+  document.getElementById('modal-proc-state').classList.add('hidden');
+  document.getElementById('modal-success-state').classList.add('hidden');
+  document.getElementById('report-form').reset();
+  document.getElementById('modal-fname').textContent = '';
+  document.getElementById('modal-search').value = '';
+  document.getElementById('modal-site-id').value = '';
+  modalPickedSiteId = '';
+  document.getElementById('modal-submit-btn').disabled = false;
+  document.getElementById('modal-submit-btn').innerHTML = '⚡ Submit Report';
+  renderModalStations();
+  modal.classList.add('open');
+}
+
+function closeReportModal() {
+  document.getElementById('report-modal').classList.remove('open');
+}
+
+// Close modal on backdrop click
+document.getElementById('report-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReportModal();
+});
+
+async function submitReport(e) {
+  e.preventDefault();
+  const form = document.getElementById('report-form');
+  const btn = document.getElementById('modal-submit-btn');
+  const siteId = document.getElementById('modal-site-id').value;
+
+  if (!siteId) {
+    toast('Please select a station first.');
+    return;
+  }
+
+  const formData = new FormData(form);
+  const stationName = entities.find(x => x.site_id === siteId)?.name || 'Station';
+
   btn.disabled = true;
-  document.body.addEventListener('htmx:afterSwap', function h(evt) {
-    if (evt.detail.target.id === 'notif') {
-      btn.textContent = 'Submit Report'; btn.disabled = false;
-      form.reset(); document.getElementById('fname').textContent = '';
-      const txt = document.getElementById('notif').textContent;
-      if (txt) toast(txt);
-      document.body.removeEventListener('htmx:afterSwap', h);
-      // AI pipeline takes ~3–5s — refresh entities so the updated safety
-      // label appears without waiting for the 30s polling cycle.
-      if (txt && !txt.toLowerCase().includes('error') && !txt.toLowerCase().includes('failed')) {
-        setTimeout(fetchEntities, 5000);
-        setTimeout(() => { toast('AI analysis complete — map updated.'); fetchEntities(); }, 10000);
-      }
+  btn.innerHTML = '<span class="spin"></span> Uploading…';
+
+  try {
+    const res = await fetch('/api/reports', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Upload failed');
+
+    const uploadData = await res.json();
+    const reportId = uploadData.report_id;
+
+    // Immediately switch to processing state
+    document.getElementById('modal-form-state').classList.add('hidden');
+    document.getElementById('modal-proc-state').classList.remove('hidden');
+
+    // Poll for AI tags (the watcher takes ~2-3 seconds)
+    let tags = [];
+    let attempts = 0;
+    while (attempts < 10) {
+      await new Promise(r => setTimeout(r, 1000));
+      attempts++;
+      try {
+        const status = await fetch(`/api/reports/${reportId}`).then(r => r.json());
+        if (status.status === 'complete' && status.ai_tags) {
+          tags = status.ai_tags;
+          break;
+        }
+      } catch(_) {}
     }
-  });
+
+    // Build description
+    let desc = `Your photo of ${stationName} has been analyzed and the safety score has been updated.`;
+    try {
+      const ents = await fetch('/api/entities').then(r => r.json());
+      const ent = ents.find(x => x.site_id === siteId);
+      if (ent && ent.safety_label) {
+        const labelText = ent.safety_label === 'safe' ? 'Water conditions appear safe'
+          : ent.safety_label === 'moderate' ? 'Moderate risk detected — exercise caution'
+          : 'Elevated risk detected — avoid contact';
+        desc = `${labelText} at ${stationName}. The safety score has been updated on the map.`;
+      }
+    } catch(_) {}
+
+    // Switch to success state
+    document.getElementById('modal-proc-state').classList.add('hidden');
+    document.getElementById('modal-success-state').classList.remove('hidden');
+    document.getElementById('success-desc').textContent = desc;
+
+    // Show AI tags
+    const tagsEl = document.getElementById('success-tags');
+    tagsEl.innerHTML = '';
+    const warnTags = ['algae','pollution','debris','turbid','discoloration','foam'];
+    if (tags.length > 0) {
+      tags.forEach(t => {
+        const tag = document.createElement('span');
+        tag.className = 'ai-tag' + (warnTags.includes(t.toLowerCase()) ? ' warn' : '');
+        tag.textContent = t;
+        tagsEl.appendChild(tag);
+      });
+    }
+
+    // Refresh the map
+    fetchEntities();
+    toast('✓ Report submitted — safety score updated!');
+
+  } catch(err) {
+    // Reset back to form on error
+    document.getElementById('modal-proc-state').classList.add('hidden');
+    document.getElementById('modal-form-state').classList.remove('hidden');
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Submit Report';
+    toast('Upload failed. Please try again.');
+  }
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
