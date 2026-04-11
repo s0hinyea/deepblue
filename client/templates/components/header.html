@@ -1,0 +1,23 @@
+{{ define "header" }}
+<header class="app-header">
+  <div class="app-header__brand">
+    <p class="eyebrow">Water Intelligence Dashboard</p>
+    <h1>DeepBlue</h1>
+  </div>
+
+  <div class="app-header__status">
+    <span class="status-badge status-badge--live">Live Analysis Enabled</span>
+  </div>
+
+  <dl class="stats-strip">
+    <div class="stat-chip">
+      <dt>Reports Today</dt>
+      <dd id="reports-today">24</dd>
+    </div>
+    <div class="stat-chip">
+      <dt>Flagged Alerts</dt>
+      <dd id="flagged-alerts">7</dd>
+    </div>
+  </dl>
+</header>
+{{ end }}

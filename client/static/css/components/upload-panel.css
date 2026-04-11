@@ -1,0 +1,74 @@
+.panel--upload {
+  background:
+    linear-gradient(180deg, rgba(27, 39, 57, 0.98), rgba(19, 29, 43, 0.98));
+}
+
+.upload-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1.25rem 0;
+}
+
+.upload-dropzone {
+  background:
+    linear-gradient(180deg, rgba(48, 70, 95, 0.92), rgba(34, 50, 71, 0.98));
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 0.35rem;
+  min-height: 150px;
+  padding: 1.2rem;
+  place-content: center;
+  text-align: center;
+}
+
+.upload-dropzone__title {
+  color: var(--aqua-bright);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.upload-dropzone__hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.upload-dropzone input {
+  display: none;
+}
+
+.upload-fields {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.upload-fields label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.upload-fields span {
+  color: var(--aqua-bright);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.upload-fields select,
+.upload-fields textarea {
+  background: var(--layer-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0.8rem 0.9rem;
+  resize: vertical;
+}
+
+.upload-fields textarea::placeholder {
+  color: var(--muted);
+}
+
+.upload-submit {
+  margin-bottom: 20px;
+}

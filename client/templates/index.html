@@ -1,0 +1,16 @@
+{{ define "title" }}DeepBlue Dashboard{{ end }}
+
+{{ define "page" }}
+  {{ template "header" . }}
+
+  <main class="dashboard-shell">
+    <section class="dashboard-grid">
+      {{ template "map-panel" . }}
+
+      <aside class="dashboard-rail" aria-label="Controls and alerts">
+        {{ template "upload-panel" . }}
+        {{ template "alerts-panel" . }}
+      </aside>
+    </section>
+  </main>
+{{ end }}

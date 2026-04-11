@@ -1,0 +1,129 @@
+@import url("./layout/dashboard.css");
+@import url("./components/header.css");
+@import url("./components/map-panel.css");
+@import url("./components/upload-panel.css");
+@import url("./components/alerts-panel.css");
+
+:root {
+  --bg: #08101a;
+  --layer-1: #0b1220;
+  --layer-2: #162131;
+  --layer-3: #223247;
+  --layer-4: #30465f;
+  --surface: var(--layer-2);
+  --surface-strong: var(--layer-3);
+  --surface-tint: var(--layer-4);
+  --border: #3b5167;
+  --border-strong: #4b6278;
+  --text: #e4edf5;
+  --muted: #9db0c2;
+  --navy: #0b1f33;
+  --blue: #0f5e7a;
+  --aqua: #3db6c6;
+  --aqua-bright: #6fd5e2;
+  --safe: #2e9e6f;
+  --watch: #e9a93b;
+  --risk: #d94b4b;
+  --shadow: 0 24px 48px rgba(0, 0, 0, 0.34);
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(61, 182, 198, 0.16), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(11, 31, 51, 0.28), transparent 28%),
+    linear-gradient(180deg, #050a12 0%, var(--bg) 100%);
+  color: var(--text);
+  font-family: "IBM Plex Sans", sans-serif;
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dt,
+dd {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+time,
+.metric-value,
+.confidence-value {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.eyebrow {
+  color: var(--aqua-bright);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.panel {
+  background: linear-gradient(180deg, rgba(27, 39, 57, 0.98), rgba(19, 29, 43, 0.98));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.panel__header {
+  align-items: start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0;
+}
+
+.panel__header h2 {
+  color: var(--text);
+  font-size: 1.35rem;
+  margin-top: 0.2rem;
+}
+
+.button-primary,
+.button-secondary {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.78rem 1rem;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.button-primary {
+  background: linear-gradient(135deg, var(--blue), var(--aqua));
+  color: white;
+}
+
+.button-secondary {
+  background: var(--layer-4);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.button-primary:hover,
+.button-secondary:hover {
+  transform: translateY(-1px);
+}

@@ -1,0 +1,34 @@
+{{ define "upload-panel" }}
+<section class="panel panel--upload" aria-labelledby="upload-panel-title">
+  <div class="panel__header">
+    <div>
+      <p class="eyebrow">Community Report</p>
+      <h2 id="upload-panel-title">Upload Image</h2>
+    </div>
+  </div>
+
+  <form
+    class="upload-form"
+    hx-encoding="multipart/form-data"
+    hx-post="/reports"
+    hx-target="#upload-result"
+    hx-swap="innerHTML"
+  >
+    <label class="upload-dropzone" for="report-image">
+      <span class="upload-dropzone__title">Drop an image here or browse</span>
+      <span class="upload-dropzone__hint">JPG, PNG, HEIC up to 10MB</span>
+      <input id="report-image" name="image" type="file" accept="image/*" />
+    </label>
+
+    <div class="upload-fields">
+      <label>
+        <span>Notes</span>
+        <textarea name="note" rows="2" placeholder="Describe what you observed."></textarea>
+      </label>
+    </div>
+
+    <button type="submit" class="button-primary upload-submit">Analyze Report</button>
+  </form>
+
+</section>
+{{ end }}

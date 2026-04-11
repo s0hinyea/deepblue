@@ -1,0 +1,17 @@
+{{ define "map-panel" }}
+<section class="panel panel--map" aria-labelledby="map-panel-title">
+  <div class="panel__header panel__header--map">
+    <div class="map-heading">
+      <h2 id="map-panel-title">Monitoring View</h2>
+      <p class="eyebrow">Spatial Overview</p>
+    </div>
+    <div class="map-legend" aria-label="Severity legend">
+      <span class="legend-item legend-item--safe"><span class="legend-dot legend-dot--safe"></span>Safe</span>
+      <span class="legend-item legend-item--watch"><span class="legend-dot legend-dot--watch"></span>Watch</span>
+      <span class="legend-item legend-item--risk"><span class="legend-dot legend-dot--risk"></span>High Risk</span>
+    </div>
+  </div>
+
+  <div id="incident-map" class="map-canvas" aria-label="Water monitoring map"></div>
+</section>
+{{ end }}

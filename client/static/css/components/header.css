@@ -1,0 +1,65 @@
+.app-header__brand .eyebrow {
+  color: var(--aqua-bright);
+}
+
+.app-header__brand h1 {
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  margin-top: 0.2rem;
+}
+
+.app-header__status {
+  display: flex;
+  justify-content: center;
+}
+
+.status-badge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.55rem 0.85rem;
+}
+
+.status-badge--live {
+  background: rgba(46, 158, 111, 0.18);
+  border: 1px solid rgba(46, 158, 111, 0.32);
+  color: var(--safe);
+}
+
+.stats-strip {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stat-chip {
+  background: linear-gradient(180deg, rgba(48, 70, 95, 0.62), rgba(34, 50, 71, 0.96));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 0 rgba(111, 213, 226, 0.08);
+  padding: 0.9rem 1rem;
+}
+
+.stat-chip dt {
+  color: var(--aqua-bright);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.stat-chip dd {
+  color: var(--text);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-top: 0.3rem;
+}
+
+@media (max-width: 720px) {
+  .stats-strip {
+    grid-template-columns: 1fr;
+  }
+}

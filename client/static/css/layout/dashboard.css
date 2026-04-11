@@ -1,0 +1,62 @@
+.app-frame {
+  background:
+    linear-gradient(180deg, rgba(15, 21, 33, 0.96), rgba(11, 18, 32, 0.98));
+  border: 1px solid rgba(59, 81, 103, 0.9);
+  border-radius: 28px;
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.38);
+  display: grid;
+  gap: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(100vh - 2rem);
+  margin: 1rem;
+  overflow: hidden;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.app-header,
+.dashboard-shell {
+  margin: 0 auto;
+  max-width: 1480px;
+  width: 100%;
+}
+
+.app-header {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1fr);
+  padding-bottom: 1rem;
+}
+
+.dashboard-shell {
+  min-height: 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 2.2fr) minmax(320px, 0.95fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.dashboard-rail {
+  display: grid;
+  gap: 1.25rem;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+@media (max-width: 1080px) {
+  .app-header {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-rail {
+    grid-template-rows: auto auto;
+  }
+}

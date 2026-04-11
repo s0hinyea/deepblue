@@ -1,0 +1,48 @@
+{{ define "alerts-panel" }}
+<section class="panel panel--alerts" aria-labelledby="alerts-panel-title">
+  <div class="panel__header">
+    <div>
+      <p class="eyebrow">Live Feed</p>
+      <h2 id="alerts-panel-title">Recent Alerts</h2>
+    </div>
+    <button
+      class="button-secondary"
+      hx-get="/alerts"
+      hx-target="#alerts-feed"
+      hx-swap="innerHTML"
+      type="button"
+    >
+      Refresh
+    </button>
+  </div>
+
+  <div id="alerts-feed" class="alerts-feed" aria-live="polite">
+    <article class="alert-row alert-row--new alert-row--risk">
+      <div class="alert-row__badge alert-row__badge--risk"></div>
+      <div class="alert-row__content">
+        <h3>Possible algae bloom detected</h3>
+        <p>Brooklyn Waterfront</p>
+      </div>
+      <time datetime="2026-04-10T13:40:00-04:00">1:40 PM</time>
+    </article>
+
+    <article class="alert-row alert-row--watch">
+      <div class="alert-row__badge alert-row__badge--watch"></div>
+      <div class="alert-row__content">
+        <h3>Turbidity spike reported</h3>
+        <p>Harlem River</p>
+      </div>
+      <time datetime="2026-04-10T12:58:00-04:00">12:58 PM</time>
+    </article>
+
+    <article class="alert-row alert-row--safe">
+      <div class="alert-row__badge alert-row__badge--safe"></div>
+      <div class="alert-row__content">
+        <h3>Routine upload processed</h3>
+        <p>Jamaica Bay</p>
+      </div>
+      <time datetime="2026-04-10T12:14:00-04:00">12:14 PM</time>
+    </article>
+  </div>
+</section>
+{{ end }}
