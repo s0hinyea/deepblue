@@ -564,6 +564,7 @@ select.fi option { background: var(--card); }
 
     <div class="sheet-advisory">
       <button class="adv-btn" id="adv-btn" onclick="fetchAdvisory()">✦ AI Advisory</button>
+      <button class="adv-btn" style="border-color:var(--border-b);color:var(--muted-l)" onclick="openReportForSelected()">+ Report</button>
       <div id="advisory-out">
         <div class="adv-section" id="adv-sensor" style="display:none">
           <div class="adv-section-label">Sensor &amp; Guidelines</div>
@@ -970,6 +971,28 @@ function openReportModal() {
 
 function closeReportModal() {
   document.getElementById('report-modal').classList.remove('open');
+}
+
+function openReportForSelected() {
+  if (!selected) return;
+  const e = entities.find(x => x.site_id === selected);
+  closeSheet();
+  openReportModal();
+  if (!e) return;
+  // Pre-select the station in the modal
+  modalPickedSiteId = e.site_id;
+  document.getElementById('modal-site-id').value = e.site_id;
+  document.getElementById('modal-search').value = e.name || e.site_id;
+  renderModalStations(e.name || e.site_id);
+  // Mark it as picked in the list
+  setTimeout(() => {
+    const list = document.getElementById('modal-station-list');
+    list.querySelectorAll('.station-opt').forEach(o => {
+      if (o.querySelector('.so-id') && o.querySelector('.so-id').textContent === e.site_id) {
+        o.classList.add('picked');
+      }
+    });
+  }, 0);
 }
 
 // Close modal on backdrop click
