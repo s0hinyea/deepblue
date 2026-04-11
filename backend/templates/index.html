@@ -611,6 +611,12 @@ function onSubmitReport(form) {
       const txt = document.getElementById('notif').textContent;
       if (txt) toast(txt);
       document.body.removeEventListener('htmx:afterSwap', h);
+      // AI pipeline takes ~3–5s — refresh entities so the updated safety
+      // label appears without waiting for the 30s polling cycle.
+      if (txt && !txt.toLowerCase().includes('error') && !txt.toLowerCase().includes('failed')) {
+        setTimeout(fetchEntities, 5000);
+        setTimeout(() => { toast('AI analysis complete — map updated.'); fetchEntities(); }, 10000);
+      }
     }
   });
 }
