@@ -106,10 +106,16 @@ Example: ["algae","turbid"]`
 // GenerateAdvisory calls Claude 3.5 Sonnet with the water entity's live metrics
 // plus the top RAG paragraphs from the EPA/WHO knowledge base, and returns a
 // 2-sentence plain-English safety advisory.
-func GenerateAdvisory(ctx context.Context, entity models.WaterEntity, manualParagraphs []string, communityContext string) (string, error) {
+// AdvisoryResult holds the two sections of the generated advisory.
+type AdvisoryResult struct {
+	SensorAdvisory    string
+	CommunityAdvisory string
+}
+
+func GenerateAdvisory(ctx context.Context, entity models.WaterEntity, manualParagraphs []string, communityContext string) (AdvisoryResult, error) {
 	brc, err := newBedrockClient(ctx)
 	if err != nil {
-		return "", err
+		return AdvisoryResult{}, err
 	}
 
 	guidelines := strings.Join(manualParagraphs, "\n\n---\n\n")
@@ -127,7 +133,7 @@ func GenerateAdvisory(ctx context.Context, entity models.WaterEntity, manualPara
 		turbLine = fmt.Sprintf("Turbidity:   %.2f NTU  (EPA recreational threshold: 25 NTU)", entity.OfficialMetrics.TurbidityNTU)
 	}
 
-	prompt := fmt.Sprintf(`You are a public water safety expert writing an advisory for swimmers and recreators.
+	prompt := fmt.Sprintf(`You are a public water safety expert writing advisories for swimmers and recreators.
 
 Location:     %s
 %s
@@ -140,8 +146,11 @@ Safety Score: %.2f / 1.0  (0 = safe, 1 = dangerous)
 Relevant EPA / WHO guidelines:
 %s
 
-Write exactly 2–3 sentences directed at the public. Reference both sensor data and community visual reports when available. Only reference sensor readings that were actually measured — do not comment on metrics marked "not measured". Mention any risks and whether the location is currently safe for contact recreation.
-No bullet points. No headers.`,
+Respond with valid JSON only — no markdown, no explanation. Use exactly this shape:
+{
+  "sensor_advisory": "1–2 sentences based only on the sensor readings and EPA/WHO guidelines above. Only reference metrics that were actually measured. State whether the location is safe for contact recreation.",
+  "community_advisory": "1–2 sentences based only on the community visual reports above. If no reports were submitted, write: No community reports have been submitted for this station yet."
+}`,
 		entity.Name,
 		phLine,
 		tempLine,
@@ -153,14 +162,30 @@ No bullet points. No headers.`,
 
 	req := claudeRequest{
 		AnthropicVersion: "bedrock-2023-05-31",
-		MaxTokens:        256,
+		MaxTokens:        512,
 		Messages: []claudeMessage{{
 			Role:    "user",
 			Content: []contentBlock{{Type: "text", Text: prompt}},
 		}},
 	}
 
-	return invokeClaudeRaw(ctx, brc, req)
+	raw, err := invokeClaudeRaw(ctx, brc, req)
+	if err != nil {
+		return AdvisoryResult{}, err
+	}
+
+	var result AdvisoryResult
+	var parsed struct {
+		SensorAdvisory    string `json:"sensor_advisory"`
+		CommunityAdvisory string `json:"community_advisory"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(raw)), &parsed); err != nil {
+		// Fallback: put the raw response in sensor_advisory if JSON parsing fails.
+		return AdvisoryResult{SensorAdvisory: raw}, nil
+	}
+	result.SensorAdvisory = parsed.SensorAdvisory
+	result.CommunityAdvisory = parsed.CommunityAdvisory
+	return result, nil
 }
 
 // ── shared helpers ─────────────────────────────────────────────────────────────

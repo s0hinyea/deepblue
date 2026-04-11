@@ -118,14 +118,16 @@ func TestPipeline_GenerateAdvisory(t *testing.T) {
 		t.Fatalf("GenerateAdvisory error: %v", err)
 	}
 
-	t.Logf("Advisory: %s", advisory)
+	t.Logf("Sensor advisory: %s", advisory.SensorAdvisory)
+	t.Logf("Community advisory: %s", advisory.CommunityAdvisory)
 
-	if strings.TrimSpace(advisory) == "" {
-		t.Fatal("advisory is empty")
+	if strings.TrimSpace(advisory.SensorAdvisory) == "" {
+		t.Fatal("sensor_advisory is empty")
 	}
-	if len(advisory) < 50 {
-		t.Errorf("advisory suspiciously short (%d chars): %q", len(advisory), advisory)
+	if len(advisory.SensorAdvisory) < 30 {
+		t.Errorf("sensor_advisory suspiciously short (%d chars): %q", len(advisory.SensorAdvisory), advisory.SensorAdvisory)
 	}
+	t.Logf("Community advisory: %s", advisory.CommunityAdvisory)
 }
 
 // TestPipeline_EndToEnd inserts a synthetic community report, waits for the

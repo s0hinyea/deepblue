@@ -87,8 +87,9 @@ func AdvisoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"entity":   entity.Name,
-		"advisory": advisory,
+		"entity":             entity.Name,
+		"sensor_advisory":    advisory.SensorAdvisory,
+		"community_advisory": advisory.CommunityAdvisory,
 	})
 }
 
