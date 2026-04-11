@@ -21,9 +21,9 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// publicAlgaeImageURL is a small, publicly readable JPEG showing green water
-// that Claude should consistently tag with "algae" or "discoloration".
-const publicAlgaeImageURL = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cyanobacteria_Bloom_on_the_Potomac_River.jpg/640px-Cyanobacteria_Bloom_on_the_Potomac_River.jpg"
+// publicAlgaeImageURL is a publicly readable JPEG of murky/green water.
+// Unsplash CDN — no hotlink restrictions, always returns 200.
+const publicAlgaeImageURL = "https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=640&q=80"
 
 func setup(t *testing.T) {
 	t.Helper()
