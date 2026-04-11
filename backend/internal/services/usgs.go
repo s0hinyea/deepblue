@@ -93,7 +93,6 @@ func FetchAndSyncWaterData() {
 	}
 
 	sites, metrics := parseAll(data)
-	log.Printf("[USGS] Parsed %d sites from API response.", len(sites))
 	syncToMongo(sites, metrics)
 }
 
@@ -177,13 +176,11 @@ func syncToMongo(sites map[string]*siteInfo, metrics map[string]*siteMetrics) {
 	defer cancel()
 
 	synced := 0
-	eligible := 0
 	for id, site := range sites {
 		m := metrics[id]
 		if !m.hasPH && !m.hasTemp && !m.hasTurb {
 			continue // no usable data for this site
 		}
-		eligible++
 
 		setFields := bson.M{
 			"site_id": id,
@@ -204,11 +201,11 @@ func syncToMongo(sites map[string]*siteInfo, metrics map[string]*siteMetrics) {
 			options.UpdateOne().SetUpsert(true),
 		)
 		if err != nil {
-			log.Printf("[USGS] Upsert failed for site %s: %v | setFields=%v", id, err, setFields)
+			log.Printf("[USGS] Upsert failed for site %s: %v", id, err)
 			continue
 		}
 		synced++
 	}
 
-	log.Printf("[USGS] Sync complete — %d/%d NY sites upserted (eligible=%d, total_sites=%d).", synced, eligible, eligible, len(sites))
+	log.Printf("[USGS] Sync complete — %d NY sites upserted.", synced)
 }
