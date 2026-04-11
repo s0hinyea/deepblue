@@ -396,9 +396,32 @@ select.fi option { background: var(--card); }
 .sm-lbl   { font-size: 9.5px; color: var(--muted-l); text-transform: uppercase; letter-spacing: .08em; }
 .sm-val   { font-family: var(--mono); font-size: 13px; font-weight: 500; }
 .track    { height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.fill     { height: 100%; border-radius: 3px; background: var(--blue); transition: width .55s ease; }
-.fill.warn   { background: var(--moderate); }
-.fill.danger { background: var(--danger); }
+.fill        { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width .55s ease; }
+.fill.warn   { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.fill.danger { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+/* Quick Filters */
+.quick-filters {
+  display: flex; gap: 6px; padding: 0 10px 10px; border-bottom: 1px solid var(--border-b); flex-shrink: 0;
+}
+.qf {
+  flex: 1; padding: 5px 0; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--card); color: var(--muted); font-size: 9px; font-weight: 700;
+  cursor: pointer; transition: all .15s; text-transform: uppercase; letter-spacing: .05em;
+}
+.qf:hover { background: var(--card-hover); color: var(--white); }
+.qf.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue-bright); }
+
+/* Breathing Markers */
+.pulse-ring {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%; animation: pulse-ring 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0 0 currentColor; }
+  70%  { transform: scale(2.8); opacity: 0; box-shadow: 0 0 0 8px currentColor; }
+  100% { transform: scale(1); opacity: 0; }
+}
 
 /* Advisory row */
 .sheet-advisory { display: flex; align-items: flex-start; gap: 12px; }
@@ -475,6 +498,13 @@ select.fi option { background: var(--card); }
 
     <div class="search-wrap">
       <input type="text" class="search-input" id="sidebar-search" placeholder="Search stations…" oninput="filterSidebar()">
+    </div>
+
+    <div class="quick-filters">
+      <button class="qf active" data-risk="all">All</button>
+      <button class="qf" data-risk="safe">Safe</button>
+      <button class="qf" data-risk="moderate">Mod</button>
+      <button class="qf" data-risk="dangerous">Danger</button>
     </div>
 
     <div id="site-list">
@@ -615,6 +645,7 @@ let entities  = [];
 let markers   = {};
 let selected  = null;
 let firstLoad = true;
+let currentRiskFilter = 'all';
 
 // ── Map ────────────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: true }).setView([41, -80], 5);
@@ -649,10 +680,12 @@ function markerIcon(label, active) {
     ? `0 0 0 5px rgba(255,255,255,.1), 0 0 26px ${color}`
     : `0 0 12px ${color}99`;
   const border = active ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.18)';
+  const pulseHTML = (!active && (label === 'dangerous' || label === 'moderate')) 
+    ? `<div class="pulse-ring" style="color:${color}"></div>` : '';
   return L.divIcon({
     className: '',
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;
-      background:${color};box-shadow:${shadow};border:2px solid ${border};transition:all .3s;"></div>`,
+    html: `<div style="position:relative; width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};box-shadow:${shadow};border:2px solid ${border};transition:all .3s;">${pulseHTML}</div>`,
     iconSize: [size,size], iconAnchor: [size/2,size/2],
   });
 }
@@ -664,13 +697,17 @@ function setBar(id, pct, cls) {
 }
 
 // ── Render list ────────────────────────────────────────────────────────────────
-function renderList(filter) {
+function renderList() {
   const el = document.getElementById('site-list');
   el.innerHTML = '';
-  const q = (filter || '').toLowerCase();
-  const filtered = q ? entities.filter(e => 
-    (e.name || '').toLowerCase().includes(q) || (e.site_id || '').includes(q)
-  ) : entities;
+  const q = (document.getElementById('sidebar-search')?.value || '').toLowerCase();
+  
+  const filtered = entities.filter(e => {
+    const matchQ = !q || (e.name || '').toLowerCase().includes(q) || (e.site_id || '').includes(q);
+    const matchRisk = currentRiskFilter === 'all' || e.safety_label === currentRiskFilter;
+    return matchQ && matchRisk;
+  });
+
   filtered.forEach(e => {
     const id = e.site_id || '', lbl = e.safety_label || '';
     const m = metrics(e), active = id === selected;
@@ -690,14 +727,13 @@ function renderList(filter) {
     card.addEventListener('click', () => selectSite(id));
     el.appendChild(card);
   });
-  if (q && filtered.length === 0) {
-    el.innerHTML = '<div class="no-results">No stations match your search</div>';
+  if (filtered.length === 0) {
+    el.innerHTML = '<div class="no-results">No stations match criteria</div>';
   }
 }
 
 function filterSidebar() {
-  const q = document.getElementById('sidebar-search').value;
-  renderList(q);
+  renderList();
 }
 
 // ── Render markers ─────────────────────────────────────────────────────────────
@@ -707,8 +743,18 @@ function renderMarkers() {
     const id = e.site_id || '';
     const c  = e.location && e.location.coordinates;
     if (!c) return;
+    
+    const matchRisk = currentRiskFilter === 'all' || e.safety_label === currentRiskFilter;
+    if (!matchRisk) {
+      if (markers[id] && map.hasLayer(markers[id])) {
+        map.removeLayer(markers[id]);
+      }
+      return;
+    }
+
     const [lng, lat] = c, active = id === selected;
     if (markers[id]) {
+      if (!map.hasLayer(markers[id])) markers[id].addTo(map);
       markers[id].setIcon(markerIcon(e.safety_label, active));
     } else {
       const mk = L.marker([lat, lng], { icon: markerIcon(e.safety_label, active) }).addTo(map);
@@ -761,11 +807,9 @@ function filterModalStations() {
 
 // ── Select site ────────────────────────────────────────────────────────────────
 function selectSite(id) {
-  console.log('[DeepBlue] selectSite called, id=', id);
   const isNew = selected !== id;
   selected = id;
   const e = entities.find(x => x.site_id === id);
-  console.log('[DeepBlue] entity found=', !!e);
   if (!e) return;
 
   document.querySelectorAll('.site-card').forEach(c =>
@@ -804,6 +848,8 @@ function openSheet(e, isNew = false) {
 
   // Reset advisory only if opening a new/different sheet
   if (isNew) {
+    if (window.typeTimer1) clearInterval(window.typeTimer1);
+    if (window.typeTimer2) clearInterval(window.typeTimer2);
     document.getElementById('advisory-out').style.display = 'none';
     document.getElementById('adv-sensor').style.display = 'none';
     document.getElementById('adv-community').style.display = 'none';
@@ -813,10 +859,7 @@ function openSheet(e, isNew = false) {
     btn.disabled = false; btn.textContent = '✦ AI Advisory';
   }
 
-  const sheet = document.getElementById('detail-sheet');
-  console.log('[DeepBlue] openSheet adding .open, sheet=', sheet);
-  sheet.classList.add('open');
-  console.log('[DeepBlue] sheet classes after add:', sheet.className);
+  document.getElementById('detail-sheet').classList.add('open');
 }
 
 function closeSheet() {
@@ -845,11 +888,36 @@ async function fetchAdvisory() {
     const data = await fetch(`/api/entity/${selected}/advisory`).then(r => r.json());
     const sensorEl    = document.getElementById('adv-sensor');
     const communityEl = document.getElementById('adv-community');
-    document.getElementById('adv-sensor-text').textContent    = data.sensor_advisory    || '';
-    document.getElementById('adv-community-text').textContent = data.community_advisory || '';
+    const stext = document.getElementById('adv-sensor-text');
+    const ctext = document.getElementById('adv-community-text');
+    
+    stext.textContent = '';
+    ctext.textContent = '';
     sensorEl.style.display    = data.sensor_advisory    ? 'block' : 'none';
     communityEl.style.display = data.community_advisory ? 'block' : 'none';
     out.style.display = 'block';
+
+    const sFull = data.sensor_advisory || '';
+    const cFull = data.community_advisory || '';
+    
+    let i1 = 0;
+    if (window.typeTimer1) clearInterval(window.typeTimer1);
+    if (sFull) {
+      window.typeTimer1 = setInterval(() => {
+        stext.textContent += sFull.charAt(i1++);
+        if (i1 >= sFull.length) clearInterval(window.typeTimer1);
+      }, 15);
+    }
+    
+    let i2 = 0;
+    if (window.typeTimer2) clearInterval(window.typeTimer2);
+    if (cFull) {
+      window.typeTimer2 = setInterval(() => {
+        ctext.textContent += cFull.charAt(i2++);
+        if (i2 >= cFull.length) clearInterval(window.typeTimer2);
+      }, 15);
+    }
+
     btn.textContent = '↺ Refresh';
   } catch {
     document.getElementById('adv-sensor-text').textContent = 'Failed to generate advisory.';
@@ -1006,6 +1074,16 @@ function toast(msg) {
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.qf').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.qf').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRiskFilter = btn.dataset.risk;
+    renderList();
+    renderMarkers();
+  });
+});
+
 fetchEntities();
 setInterval(fetchEntities, 30000);
 </script>
