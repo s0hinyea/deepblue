@@ -40,7 +40,10 @@ func main() {
 	// 5. Register routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", handlers.HomeHandler)
+	mux.HandleFunc("GET /api/entities", handlers.EntitiesHandler)
+	mux.HandleFunc("POST /api/reports", handlers.ReportsHandler)
 	mux.HandleFunc("GET /api/entity/{id}/advisory", handlers.AdvisoryHandler)
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	// 6. Start the HTTP server
 	addr := ":8080"
