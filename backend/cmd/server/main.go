@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/s0hinyea/deepblue/internal/db"
 	"github.com/s0hinyea/deepblue/internal/handlers"
+	"github.com/s0hinyea/deepblue/internal/services"
 )
 
 func main() {
@@ -20,11 +23,26 @@ func main() {
 	// 2. Connect to MongoDB
 	db.Connect()
 
-	// 3. Register routes
+	// 3. Phase 3 — Spec 3.2: Background metronome goroutine.
+	//    Fires immediately on startup, then every 15 minutes.
+	go func() {
+		services.FetchAndSyncWaterData()
+		ticker := time.NewTicker(15 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			services.FetchAndSyncWaterData()
+		}
+	}()
+
+	// 4. Phase 4/5 — Spec 4.2 + 5.1/5.2: Change stream watcher with AI pipeline.
+	go services.WatchReports(context.Background())
+
+	// 5. Register routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", handlers.HomeHandler)
+	mux.HandleFunc("GET /api/entity/{id}/advisory", handlers.AdvisoryHandler)
 
-	// 4. Start the HTTP server
+	// 6. Start the HTTP server
 	addr := ":8080"
 	fmt.Printf("DeepBlue server running on http://localhost%s\n", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
