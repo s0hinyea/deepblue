@@ -406,8 +406,13 @@ const badgeText = l => l ? l.toUpperCase() : 'UNKNOWN';
 
 function metrics(e) {
   const m = e.official_metrics || {};
-  return { ph: +(m.ph||0), temp: +(m.temp_c||0), turb: +(m.turbidity_ntu||0) };
+  return {
+    ph:   m.ph   != null && m.ph   !== 0 ? +m.ph   : null,
+    temp: m.temp_c != null && m.temp_c !== 0 ? +m.temp_c : null,
+    turb: m.turbidity_ntu != null && m.turbidity_ntu !== 0 ? +m.turbidity_ntu : null,
+  };
 }
+function fmt(val, digits) { return val == null ? '--' : val.toFixed(digits); }
 
 function markerIcon(label, active) {
   const color  = safetyColor(label);
@@ -446,9 +451,9 @@ function renderList() {
         <div class="badge ${badgeClass(lbl)}">${badgeText(lbl)}</div>
       </div>
       <div class="sc-metrics">
-        <div><div class="sc-ml">pH</div>  <div class="sc-mv">${m.ph.toFixed(2)}</div></div>
-        <div><div class="sc-ml">Temp</div><div class="sc-mv">${m.temp.toFixed(1)}°</div></div>
-        <div><div class="sc-ml">NTU</div> <div class="sc-mv">${m.turb.toFixed(1)}</div></div>
+        <div><div class="sc-ml">pH</div>  <div class="sc-mv">${fmt(m.ph,2)}</div></div>
+        <div><div class="sc-ml">Temp</div><div class="sc-mv">${m.temp != null ? m.temp.toFixed(1)+'°' : '--'}</div></div>
+        <div><div class="sc-ml">NTU</div> <div class="sc-mv">${fmt(m.turb,1)}</div></div>
       </div>`;
     card.addEventListener('click', () => selectSite(id));
     el.appendChild(card);
@@ -521,13 +526,13 @@ function openSheet(e) {
   badge.textContent = badgeText(lbl);
   badge.className   = 'badge ' + badgeClass(lbl);
 
-  document.getElementById('sh-ph').textContent   = m.ph.toFixed(2);
-  document.getElementById('sh-temp').textContent = `${m.temp.toFixed(1)} °C`;
-  document.getElementById('sh-turb').textContent = `${m.turb.toFixed(1)} NTU`;
+  document.getElementById('sh-ph').textContent   = fmt(m.ph, 2);
+  document.getElementById('sh-temp').textContent = m.temp != null ? `${m.temp.toFixed(1)} °C` : '--';
+  document.getElementById('sh-turb').textContent = m.turb != null ? `${m.turb.toFixed(1)} NTU` : '--';
 
-  setBar('fill-ph',   (m.ph   / 14) * 100, (m.ph < 6.5 || m.ph > 8.5) ? 'warn' : '');
-  setBar('fill-temp', (m.temp / 35) * 100, m.temp > 25 ? 'warn' : '');
-  setBar('fill-turb', (m.turb / 50) * 100, m.turb > 25 ? 'danger' : m.turb > 15 ? 'warn' : '');
+  setBar('fill-ph',   m.ph   != null ? (m.ph   / 14) * 100 : 0, m.ph != null && (m.ph < 6.5 || m.ph > 8.5) ? 'warn' : '');
+  setBar('fill-temp', m.temp != null ? (m.temp / 35) * 100 : 0, m.temp != null && m.temp > 25 ? 'warn' : '');
+  setBar('fill-turb', m.turb != null ? (m.turb / 50) * 100 : 0, m.turb != null && (m.turb > 25 ? 'danger' : m.turb > 15 ? 'warn' : ''));
 
   // Reset advisory
   const adv = document.getElementById('advisory-out');
