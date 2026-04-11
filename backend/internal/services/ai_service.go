@@ -114,24 +114,36 @@ func GenerateAdvisory(ctx context.Context, entity models.WaterEntity, manualPara
 
 	guidelines := strings.Join(manualParagraphs, "\n\n---\n\n")
 
+	phLine := "pH:          not measured at this station"
+	if entity.OfficialMetrics.PH != 0 {
+		phLine = fmt.Sprintf("pH:          %.2f  (safe range: 6.5–8.5)", entity.OfficialMetrics.PH)
+	}
+	tempLine := "Temperature: not measured at this station"
+	if entity.OfficialMetrics.TempC != 0 {
+		tempLine = fmt.Sprintf("Temperature: %.1f°C", entity.OfficialMetrics.TempC)
+	}
+	turbLine := "Turbidity:   not measured at this station"
+	if entity.OfficialMetrics.TurbidityNTU != 0 {
+		turbLine = fmt.Sprintf("Turbidity:   %.2f NTU  (EPA recreational threshold: 25 NTU)", entity.OfficialMetrics.TurbidityNTU)
+	}
+
 	prompt := fmt.Sprintf(`You are a public water safety expert writing an advisory for swimmers and recreators.
 
-Location:   %s
-pH:         %.2f  (safe range: 6.5–8.5)
-Temperature: %.1f°C
-Turbidity:  %.2f NTU  (EPA recreational threshold: 25 NTU)
+Location:     %s
+%s
+%s
+%s
 Safety Score: %.2f / 1.0  (0 = safe, 1 = dangerous)
 
 Relevant EPA / WHO guidelines:
 %s
 
-Write exactly 2 sentences directed at the public. Be specific about the readings above.
-Mention any risks and whether the location is currently safe for contact recreation.
+Write exactly 2 sentences directed at the public. Only reference sensor readings that were actually measured — do not comment on metrics marked "not measured". Mention any risks and whether the location is currently safe for contact recreation.
 No bullet points. No headers.`,
 		entity.Name,
-		entity.OfficialMetrics.PH,
-		entity.OfficialMetrics.TempC,
-		entity.OfficialMetrics.TurbidityNTU,
+		phLine,
+		tempLine,
+		turbLine,
 		entity.SafetyScore,
 		guidelines,
 	)
