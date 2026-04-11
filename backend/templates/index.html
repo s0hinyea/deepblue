@@ -157,7 +157,7 @@ select.fi option { background: var(--card); }
 .toast-error   { color: var(--danger); }
 
 /* ════════════════════ MAP ════════════════════ */
-#map { flex: 1; height: 100vh; }
+#map { flex: 1; height: 100vh; position: relative; z-index: 1; }
 .leaflet-control-attribution { background: rgba(7,9,13,.85) !important; color: var(--muted) !important; font-size: 9px !important; }
 .leaflet-control-attribution a { color: var(--muted-l) !important; }
 .leaflet-control-zoom a { background: var(--card) !important; color: var(--white) !important; border-color: var(--border) !important; }
@@ -168,7 +168,7 @@ select.fi option { background: var(--card); }
   bottom: 0;
   left: var(--sidebar);   /* sits over the map only, not the sidebar */
   right: 0;
-  z-index: 200;
+  z-index: 1000;
   transform: translateY(100%);
   transition: transform .38s cubic-bezier(0.32, 0, 0.67, 0);
   pointer-events: none;
