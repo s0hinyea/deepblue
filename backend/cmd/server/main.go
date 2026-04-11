@@ -44,6 +44,7 @@ func main() {
 	mux.HandleFunc("POST /api/reports", handlers.ReportsHandler)
 	mux.HandleFunc("GET /api/reports/{id}", handlers.ReportStatusHandler)
 	mux.HandleFunc("GET /api/entity/{id}/advisory", handlers.AdvisoryHandler)
+	mux.HandleFunc("GET /api/nearest-safe", handlers.GetNearestSafeSite)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	// 6. Start the HTTP server

@@ -567,6 +567,7 @@ select.fi option { background: var(--card); }
     <div class="sheet-advisory">
       <button class="adv-btn" id="adv-btn" onclick="fetchAdvisory()">✦ AI Advisory</button>
       <button class="adv-btn" style="border-color:var(--border-b);color:var(--muted-l)" onclick="openReportForSelected()">+ Report</button>
+      <button class="adv-btn" id="nearest-safe-btn" style="display:none;border-color:#22c55e;color:#22c55e" onclick="findNearestSafe()">⊕ Nearest Safe</button>
       <div id="advisory-out">
         <div class="adv-section" id="adv-sensor" style="display:none">
           <div class="adv-section-label">Sensor &amp; Guidelines</div>
@@ -866,6 +867,15 @@ function openSheet(e, isNew = false) {
   setBar('fill-turb', m.turb != null ? (m.turb / 50) * 100 : 0, m.turb != null && (m.turb > 25 ? 'danger' : m.turb > 15 ? 'warn' : ''));
 
   // Reset advisory only if opening a new/different sheet
+  const nearestBtn = document.getElementById('nearest-safe-btn');
+  if (lbl === 'dangerous' || lbl === 'moderate') {
+    nearestBtn.style.display = '';
+    nearestBtn.textContent = '⊕ Nearest Safe';
+    nearestBtn.disabled = false;
+  } else {
+    nearestBtn.style.display = 'none';
+  }
+
   if (isNew) {
     if (window.typeTimer1) clearInterval(window.typeTimer1);
     if (window.typeTimer2) clearInterval(window.typeTimer2);
@@ -945,6 +955,29 @@ async function fetchAdvisory() {
     btn.textContent = '✦ AI Advisory';
   }
   btn.disabled = false;
+}
+
+// ── Nearest safe ───────────────────────────────────────────────────────────────
+async function findNearestSafe() {
+  if (!selected) return;
+  const e = entities.find(x => x.site_id === selected);
+  if (!e || !e.location) return;
+  const [lng, lat] = e.location.coordinates;
+  const btn = document.getElementById('nearest-safe-btn');
+  btn.disabled = true;
+  btn.textContent = 'Searching…';
+  try {
+    const data = await fetch(`/api/nearest-safe?lat=${lat}&lng=${lng}`).then(r => r.json());
+    if (data.site_id) {
+      selectSite(data.site_id);
+    } else {
+      btn.textContent = 'None found';
+      setTimeout(() => { btn.textContent = '⊕ Nearest Safe'; btn.disabled = false; }, 2000);
+    }
+  } catch {
+    btn.textContent = '⊕ Nearest Safe';
+    btn.disabled = false;
+  }
 }
 
 // ── Fetch loop ─────────────────────────────────────────────────────────────────

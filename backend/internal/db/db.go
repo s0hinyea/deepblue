@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -49,4 +50,11 @@ func Connect() {
 	EntitiesCollection = DB.Collection("water_entities")
 	ReportsCollection = DB.Collection("community_reports")
 	KnowledgeCollection = DB.Collection("knowledge_chunks")
+
+	_, err = EntitiesCollection.Indexes().CreateOne(context.Background(), mongo.IndexModel{
+		Keys: bson.D{{Key: "location", Value: "2dsphere"}},
+	})
+	if err != nil {
+		log.Printf("Warning: could not create 2dsphere index: %v", err)
+	}
 }
