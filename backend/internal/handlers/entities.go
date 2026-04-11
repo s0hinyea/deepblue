@@ -15,7 +15,7 @@ func EntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := db.EntitiesCollection.Find(ctx, bson.M{})
+	cursor, err := db.EntitiesCollection.Find(ctx, bson.M{"site_id": bson.M{"$exists": true}})
 	if err != nil {
 		http.Error(w, `{"error":"db query failed"}`, http.StatusInternalServerError)
 		return
